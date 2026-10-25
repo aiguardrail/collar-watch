@@ -1,14 +1,8 @@
 """sampled-pools.jsonl'daki her havuz için Collar Guardrail MCP'sini çağırır.
 
-Akış:
-  1. tools/list → check_token_safety inputSchema'sını oku
-  2. Smoke call → ilk havuzun token'ı ile gerçek tools/call
-  3. initialize → session ID (stateless ise none)
-  4. Her havuz için T+0 ve T+3dk (paralel, Semaphore(CONCURRENCY))
-
 Kullanım:
     python -m collar_watch.collar
-    LIMIT=3 DELAY_SEC=5 python -m collar_watch.collar    # smoke test
+    LIMIT=3 DELAY_SEC=5 python -m collar_watch.collar    # smoke
 """
 import asyncio
 import json
@@ -29,13 +23,14 @@ DELAY_SEC = float(os.getenv("DELAY_SEC", "180"))
 TIMEOUT_SEC = float(os.getenv("TIMEOUT_SEC", "30"))
 REQ_PER_MIN = float(os.getenv("REQ_PER_MIN", "22"))
 CONCURRENCY = int(os.getenv("CONCURRENCY", "5"))
-LIMIT = int(os.getenv("LIMIT", "0"))  # 0 = hepsi, >0 = ilk N
+LIMIT = int(os.getenv("LIMIT", "0"))
+
+# Havuzlar arası aralık: her havuz 2 çağrı → aralıklı başlat
+POOL_INTERVAL_SEC = 2 * 60.0 / REQ_PER_MIN
 
 OK_DECISIONS = {"ALLOW", "WARN", "DENY"}
 
-# Token için kullanılabilecek alan adları
 TOKEN_KEYS = {"contract_address", "token_address", "address", "token"}
-# Chain için kullanılabilecek alan adları
 CHAIN_KEYS = {"chain", "network", "chain_id", "network_id"}
 CHAIN_INT = 4663
 CHAIN_STR = "robinhood"
@@ -85,7 +80,6 @@ def _parse_body(r: httpx.Response) -> dict:
 
 
 def _extract_text(result: dict) -> str:
-    """result.content[0].text — varsa. Yoksa boş string."""
     content = result.get("content", [])
     if content and content[0].get("type") == "text":
         return content[0].get("text", "")
@@ -93,36 +87,79 @@ def _extract_text(result: dict) -> str:
 
 
 def build_args(schema: dict, token: str) -> dict:
-    """Schema'dan argüman üret. Eksik zorunlu parametre varsa RuntimeError."""
     props = schema.get("properties", {})
     required = schema.get("required", [])
     args = {}
 
     for k, v in props.items():
         vtype = v.get("type", "")
+        enum_vals = v.get("enum")
+
         if k in TOKEN_KEYS:
             args[k] = token
         elif k in CHAIN_KEYS:
-            args[k] = CHAIN_INT if vtype == "integer" else CHAIN_STR
+            if enum_vals:
+                if CHAIN_INT in enum_vals:
+                    args[k] = CHAIN_INT
+                elif CHAIN_STR in enum_vals:
+                    args[k] = CHAIN_STR
+                else:
+                    raise RuntimeError(
+                        f"{k} enum'unda 4663/robinhood yok: {enum_vals}"
+                    )
+            elif vtype == "integer":
+                args[k] = CHAIN_INT
+            else:
+                args[k] = CHAIN_STR
 
     missing = [r for r in required if r not in args]
     if missing:
         raise RuntimeError(
             f"Karşılanamayan zorunlu parametreler: {missing}. "
-            f"Schema required={required}, properties={list(props.keys())}"
+            f"required={required}, properties={list(props.keys())}"
         )
     return args
 
 
+async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
+                           payload: dict, retries: int = 2) -> httpx.Response:
+    last_exc = None
+    for attempt in range(retries + 1):
+        try:
+            r = await client.post(COLLAR_URL, headers=headers, json=payload,
+                                  follow_redirects=True)
+            if r.status_code == 429 or r.status_code >= 500:
+                if attempt < retries:
+                    try:
+                        wait = float(r.headers.get("retry-after", 5 + 5 * attempt))
+                    except (ValueError, TypeError):
+                        wait = 5.0 + 5.0 * attempt
+                    print(f"  HTTP {r.status_code} → {wait:.1f}s sonra tekrar "
+                          f"({attempt + 1}/{retries})", file=sys.stderr)
+                    await asyncio.sleep(wait)
+                    continue
+            return r
+        except (httpx.TimeoutException, httpx.TransportError) as e:
+            last_exc = e
+            if attempt < retries:
+                wait = 2.0 + attempt
+                print(f"  {type(e).__name__} → {wait:.1f}s sonra tekrar "
+                      f"({attempt + 1}/{retries})", file=sys.stderr)
+                await asyncio.sleep(wait)
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("retry döngüsü beklenmedik şekilde bitti")
+
+
 async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
                     ) -> tuple[dict | None, str]:
-    """tools/list → schema dump. smoke_token verilirse tools/call dener."""
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
     await rate_limiter.acquire()
 
     try:
-        r = await client.post(COLLAR_URL, headers=_base_headers(), json=payload,
-                              follow_redirects=False)
+        r = await _post_with_retry(client, _base_headers(), payload)
     except Exception as e:
         return None, f"preflight ağ hatası: {type(e).__name__}: {e}"
 
@@ -156,7 +193,6 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
     if schema is None:
         return None, "check_token_safety tool bulunamadı"
 
-    # Smoke call — gerçek tools/call
     if smoke_token:
         print(f"=== SMOKE CALL token={smoke_token[:10]}... ===")
         try:
@@ -169,6 +205,10 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
         smoke = await _do_call(client, smoke_token, "", schema)
         print(f"smoke decision: {smoke['decision']}")
         print(f"smoke reason: {smoke['reason']}")
+        print(f"smoke symbol: {smoke.get('symbol')}")
+        print(f"smoke name:   {smoke.get('name')}")
+        print(f"smoke risk:   {smoke.get('risk')}")
+        print(f"smoke raw:    {smoke.get('raw', '')[:600]}")
         print("=== END SMOKE ===\n")
 
         if smoke["decision"] not in OK_DECISIONS:
@@ -179,13 +219,12 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
 
 
 async def _do_call(client: httpx.AsyncClient, token: str, session_id: str,
-                   schema: dict, chain: str = "robinhood") -> dict:
-    """Gerçek tools/call. build_args ile schema'dan argüman üretir."""
+                   schema: dict, stamp: dict | None = None) -> dict:
     try:
         args = build_args(schema, token)
     except RuntimeError as e:
         return {"decision": "ERROR", "risk": None, "reason": str(e),
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": ""}
 
     headers = _base_headers()
     if session_id:
@@ -198,52 +237,50 @@ async def _do_call(client: httpx.AsyncClient, token: str, session_id: str,
 
     await rate_limiter.acquire()
 
+    if stamp is not None:
+        stamp["t"] = time.time()
+
     try:
-        r = await client.post(COLLAR_URL, headers=headers, json=payload, follow_redirects=True)
+        r = await _post_with_retry(client, headers, payload)
         if r.status_code != 200 or not r.content.strip():
             return {"decision": "ERROR", "risk": None,
                     "reason": f"HTTP {r.status_code}: {r.text[:500]!r}",
-                    "symbol": None, "name": None}
+                    "symbol": None, "name": None, "raw": r.text}
         data = _parse_body(r)
     except Exception as e:
         return {"decision": "ERROR", "risk": None,
                 "reason": f"{type(e).__name__}: {str(e)[:300]}",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": ""}
 
-    # JSON-RPC seviyesi hata
     if "error" in data:
         return {"decision": "ERROR", "risk": None,
                 "reason": f"rpc error: {str(data['error'])[:500]}",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": json.dumps(data)}
 
     result = data.get("result", {})
+    raw_text = _extract_text(result)
 
-    # FastMCP doğrulama hataları: result.isError=true + text içinde mesaj
     if result.get("isError"):
-        raw_text = _extract_text(result)
         return {"decision": "ERROR", "risk": None,
                 "reason": f"tool isError: {raw_text[:500]}",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": raw_text}
 
-    raw_text = _extract_text(result)
     if not raw_text:
         return {"decision": "ERROR", "risk": None, "reason": "empty_content",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": ""}
 
-    # text içindeki JSON'u parse et
     try:
         inner = json.loads(raw_text)
     except json.JSONDecodeError as e:
-        # JSON değilse muhtemelen doğrulama hatası metni — tamamını göster
         return {"decision": "ERROR", "risk": None,
                 "reason": f"non-json: {e} | raw: {raw_text[:500]!r}",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": raw_text}
 
     decision = (inner.get("decision") or "").upper()
     if decision not in OK_DECISIONS:
         return {"decision": "ERROR", "risk": None,
                 "reason": f"raw: {raw_text[:500]!r}",
-                "symbol": None, "name": None}
+                "symbol": None, "name": None, "raw": raw_text}
 
     return {
         "decision": decision,
@@ -251,13 +288,8 @@ async def _do_call(client: httpx.AsyncClient, token: str, session_id: str,
         "reason": inner.get("reason") or inner.get("severity"),
         "symbol": inner.get("symbol") or inner.get("token_symbol"),
         "name": inner.get("name") or inner.get("token_name"),
+        "raw": raw_text,
     }
-
-
-async def call_collar(client: httpx.AsyncClient, token: str, session_id: str,
-                      schema: dict, chain: str = "robinhood") -> dict:
-    """_do_call'un kolaylık sarmalayıcısı."""
-    return await _do_call(client, token, session_id, schema, chain)
 
 
 async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
@@ -271,8 +303,7 @@ async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
     }
     await rate_limiter.acquire()
     try:
-        r = await client.post(COLLAR_URL, headers=_base_headers(), json=payload,
-                              follow_redirects=True)
+        r = await _post_with_retry(client, _base_headers(), payload)
         if r.status_code != 200:
             return "", f"HTTP {r.status_code}: {r.text[:200]!r}"
         body = _parse_body(r)
@@ -287,34 +318,38 @@ async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
 async def evaluate_pool(sem: asyncio.Semaphore, client: httpx.AsyncClient,
                         session_id: str, schema: dict, pool: dict,
                         idx: int, total: int) -> dict:
-    """Semaphore ile sınırlandırılmış havuz işleme. Rate limiter zaten bekletiyor."""
+    """Semaphore sadece HTTP çağrılarının etrafında."""
+    token = pool["token"]
+    s0, s3 = {}, {}
+
     async with sem:
-        token = pool["token"]
-        t0_started = time.time()
         print(f"[{idx}/{total}] T+0 token={token[:10]}...")
+        t0 = await _do_call(client, token, session_id, schema, s0)
 
-        t0 = await call_collar(client, token, session_id, schema)
+    if DELAY_SEC > 0:
+        await asyncio.sleep(DELAY_SEC)
 
-        if DELAY_SEC > 0:
-            await asyncio.sleep(DELAY_SEC)
-
+    async with sem:
         print(f"[{idx}/{total}] T+3dk token={token[:10]}...")
-        t3m = await call_collar(client, token, session_id, schema)
+        t3m = await _do_call(client, token, session_id, schema, s3)
 
-        ok = t0["decision"] in OK_DECISIONS and t3m["decision"] in OK_DECISIONS
-        changed = ok and t0["decision"] != t3m["decision"]
-        age_at_t0_sec = int(t0_started - pool["ts"]) if pool.get("ts") else None
+    ok = t0["decision"] in OK_DECISIONS and t3m["decision"] in OK_DECISIONS
+    changed = ok and t0["decision"] != t3m["decision"]
 
-        return {
-            "pool_id": pool["pool_id"], "token": token, "quote": pool["quote"],
-            "hook": pool.get("hook"), "fee": pool.get("fee"),
-            "block": pool.get("block"), "ts": pool.get("ts"),
-            "age_at_t0_sec": age_at_t0_sec,
-            "symbol": t0.get("symbol") or t3m.get("symbol"),
-            "name": t0.get("name") or t3m.get("name"),
-            "t0": t0, "t3m": t3m, "changed": changed,
-            "evaluated_at": datetime.now(timezone.utc).isoformat(),
-        }
+    age_at_t0_sec = int(s0["t"] - pool["ts"]) if pool.get("ts") and "t" in s0 else None
+    t3m_gap_sec = int(s3["t"] - s0["t"]) if "t" in s0 and "t" in s3 else None
+
+    return {
+        "pool_id": pool["pool_id"], "token": token, "quote": pool["quote"],
+        "hook": pool.get("hook"), "fee": pool.get("fee"),
+        "block": pool.get("block"), "ts": pool.get("ts"),
+        "age_at_t0_sec": age_at_t0_sec,
+        "t3m_gap_sec": t3m_gap_sec,
+        "symbol": t0.get("symbol") or t3m.get("symbol"),
+        "name": t0.get("name") or t3m.get("name"),
+        "t0": t0, "t3m": t3m, "changed": changed,
+        "evaluated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def load_pools(path: Path) -> list[dict]:
@@ -344,6 +379,7 @@ async def main():
     print(f"Collar: {COLLAR_URL}")
     print(f"Auth: {'API key ile' if COLLAR_KEY else 'authsuz'}")
     print(f"Rate limit: {REQ_PER_MIN}/dk ({60.0/REQ_PER_MIN:.1f}s/istek)")
+    print(f"Pool interval: {POOL_INTERVAL_SEC:.2f}s (staggered launch)")
     print(f"Concurrency: {CONCURRENCY}, delay: {DELAY_SEC}s")
     print("=" * 60)
     if total == 0:
@@ -352,36 +388,39 @@ async def main():
     results = []
     start = time.time()
 
-    with open(OUT, "w") as f:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SEC) as client:
-            # 1. Preflight + schema dump + smoke call (ilk havuzun token'ı)
-            smoke_token = pools[0]["token"] if pools else None
-            schema, err = await preflight(client, smoke_token)
-            if err:
-                print(f"HATA: preflight başarısız: {err}", file=sys.stderr)
-                sys.exit(2)
+    async with httpx.AsyncClient(timeout=TIMEOUT_SEC) as client:
+        smoke_token = pools[0]["token"] if pools else None
+        schema, err = await preflight(client, smoke_token)
+        if err:
+            print(f"HATA: preflight başarısız: {err}", file=sys.stderr)
+            sys.exit(2)
 
-            # 2. MCP initialize (stateless ise session none normal)
-            print("MCP initialize...")
-            session_id, init_err = await mcp_initialize(client)
-            if init_err:
-                print(f"HATA: MCP initialize başarısız: {init_err}", file=sys.stderr)
-                sys.exit(2)
-            print(f"MCP session: {session_id[:20] + '...' if session_id else '(none)'}")
-            print()
+        print("MCP initialize...")
+        session_id, init_err = await mcp_initialize(client)
+        if init_err:
+            print(f"HATA: MCP initialize başarısız: {init_err}", file=sys.stderr)
+            sys.exit(2)
+        print(f"MCP session: {session_id[:20] + '...' if session_id else '(none)'}")
+        print()
 
-            # 3. Paralel işleme (Semaphore ile bounded)
+        # STAGGERED LAUNCH — havuzları aralıklı başlat, T+0/T+3dk kuyruğa yığılmasın
+        pool_interval = 2 * 60.0 / REQ_PER_MIN
+
+        async def launch(i: int, pool: dict) -> dict:
+            await asyncio.sleep(i * pool_interval)
+            return await evaluate_pool(sem, client, session_id, schema, pool, i + 1, total)
+
+        with open(OUT, "w") as f:
             sem = asyncio.Semaphore(CONCURRENCY)
-            tasks = [
-                evaluate_pool(sem, client, session_id, schema, pool, i + 1, total)
-                for i, pool in enumerate(pools)
-            ]
+            tasks = [launch(i, pool) for i, pool in enumerate(pools)]
             for coro in asyncio.as_completed(tasks):
                 try:
                     rec = await coro
                 except Exception as e:
                     print(f"Havuz hatası: {e}", file=sys.stderr)
                     continue
+                for k in ("t0", "t3m"):
+                    rec[k].pop("raw_parsed", None)
                 results.append(rec)
                 f.write(json.dumps(rec) + "\n")
                 f.flush()
@@ -395,13 +434,26 @@ async def main():
     changed_count = sum(1 for r in results if r["changed"])
     symbols_found = sum(1 for r in results if r.get("symbol"))
     fresh_pools = sum(1 for r in results if r.get("age_at_t0_sec") is not None and r["age_at_t0_sec"] < 300)
+    gaps = [r["t3m_gap_sec"] for r in results if r.get("t3m_gap_sec") is not None]
+    median_gap = sorted(gaps)[len(gaps)//2] if gaps else None
+    p10_gap = sorted(gaps)[len(gaps)//10] if len(gaps) >= 10 else (gaps[0] if gaps else None)
+    p90_gap = sorted(gaps)[int(len(gaps)*0.9)] if len(gaps) >= 10 else (gaps[-1] if gaps else None)
 
     print(f"\nT+0 kararlar: {dict(t0_decisions)}")
     print(f"T+3dk kararlar: {dict(t3m_decisions)}")
     print(f"Değişen: {changed_count} / {len(results)}")
     print(f"Symbol bulundu: {symbols_found} / {len(results)}")
     print(f"Taze havuz (<5dk): {fresh_pools} / {len(results)}")
+    print(f"T+3dk gerçek gecikme: median={median_gap}s p10={p10_gap}s p90={p90_gap}s")
     print(f"Yazıldı: {OUT}")
+
+    # --- Backfill uyarısı ---
+    if fresh_pools == 0 and len(results) > 0:
+        print()
+        print("!!! NOT: Tüm havuzlar eski (backfill'den). Bu run 'T+3dk' iddiasını DEĞİL,")
+        print("!!! 'aynı eski token'a 2 kez sorunca karar tutarlı mı' sorusunu ölçer.")
+        print("!!! Gerçek 'T+3dk davranışı' için canlı sample (Initialize event'i anında) gerekir.")
+        print("!!! Scorecard'da 'decision stability' olarak çerçevele, 'T+3dk' deme.")
 
     if results:
         print("\n=== En sık 5 ERROR nedeni (t0) ===")

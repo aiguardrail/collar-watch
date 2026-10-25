@@ -12,6 +12,24 @@ Neler yapar:
     bloktan devam eder, aradaki boşluğu geriye dönük doldurur.
   * Geriye dönük ölçüm: BACKFILL_HOURS ile geçmiş günleri dakikalar içinde ölçer.
 
+eth_getLogs hataları (HTTP 400 veya JSON-RPC range error) otomatik olarak
+max_span'i küçültür. Başarılı çağrılar arttıkça aralık yavaşça tekrar büyütülür
+(MAX_BLOCK_RANGE tavanına kadar), böylece geçici bir hata kalıcı yavaşlığa yol açmaz.
+
+Bu sürümde (geriye dönük uyumlu) eklenenler:
+  * Sonlu modda (DURATION_HOURS=0 / süre dolmuş) poll hatası olursa hemen çıkmak yerine
+    MAX_CONSECUTIVE_ERRORS kadar tekrar dener; hâlâ bitmediyse çıkış kodu 3 döner
+    (eskiden sessizce 0 dönüyordu → CI'da "başarılı ama boş veri" riski).
+  * Rate-limit (429 / JSON-RPC "rate limit") span'i küçültmez; Retry-After'a uyar.
+  * Backoff'a jitter, tüm taşıma hataları (httpx.TransportError) için retry.
+  * Initialize blok zaman damgaları paralel (sınırlı) önceden çekilir → backfill hızlanır.
+  * JSONL yazımı parça başına tek fsync (checkpoint'ten ÖNCE) → aynı dayanıklılık, çok daha hızlı.
+  * Yarım kalmış son JSONL satırı bir sonraki yazımı bozmaz.
+  * Periyodik kısmi özet (PROGRESS_INTERVAL_SEC) + heartbeat.json (izleme için).
+  * Özete yalnızca EKLEME yapıldı: "daily", "liquidity.pools_without_liquidity", "health".
+    Mevcut tüm alanlar ve dosya formatları aynıdır.
+  * --selftest: ağsız çözümleyici testi.
+
 Kullanım:
     python -m collar_watch.counter                                  # 24 saat canlı
     BACKFILL_HOURS=168 DURATION_HOURS=0 python -m collar_watch.counter   # son 7 günü tara, çık
@@ -19,13 +37,18 @@ Kullanım:
     START_BLOCK=1234567 DURATION_HOURS=0 python -m collar_watch.counter  # belirli bloktan
     POOL_MANAGER=0x... python -m collar_watch.counter                    # tek kontrat filtresi
     DATA_DIR=run2 python -m collar_watch.counter                         # yeni, temiz ölçüm
+    python -m collar_watch.counter --selftest                            # çevrimdışı test
 
 Ortam değişkenleri:
     ROBINHOOD_RPC, POOL_MANAGER, DURATION_HOURS, BACKFILL_HOURS, START_BLOCK,
     POLL_INTERVAL_SEC (15), CONFIRMATIONS (2), MAX_BLOCK_RANGE (5000),
     TRACK_LIQUIDITY (1), EXPECTED_CHAIN_ID (4663), DATA_DIR (data),
     COUNTER_LOG (counter.log), COUNTER_SUMMARY (counter-summary.json),
-    PROGRESS_INTERVAL_SEC (900)
+    PROGRESS_INTERVAL_SEC (900),
+    MAX_CONSECUTIVE_ERRORS (10)  # yalnızca süre dolduktan sonra çıkış için geçerli
+    TS_PREFETCH_CONCURRENCY (8)
+
+Çıkış kodları: 0 = tamam, 2 = yapılandırma/zincir uyuşmazlığı, 3 = hata yüzünden bitirilemedi.
 """
 from __future__ import annotations
 
@@ -33,6 +56,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import signal
 import sys
 import time
@@ -59,6 +83,8 @@ DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 LOG_FILE = os.getenv("COUNTER_LOG", "counter.log")
 SUMMARY_FILE = os.getenv("COUNTER_SUMMARY", "counter-summary.json")
 PROGRESS_INTERVAL_SEC = float(os.getenv("PROGRESS_INTERVAL_SEC", "900"))
+MAX_CONSECUTIVE_ERRORS = int(os.getenv("MAX_CONSECUTIVE_ERRORS", "10"))
+TS_PREFETCH_CONCURRENCY = int(os.getenv("TS_PREFETCH_CONCURRENCY", "8"))
 
 # Uniswap V4 PoolManager olayları (kanonik imzalar: PoolId=bytes32, Currency=address)
 INITIALIZE_SIG = "Initialize(bytes32,address,address,uint24,int24,address,uint160,int24)"
@@ -69,6 +95,10 @@ MODIFY_LIQUIDITY_TOPIC = "0x" + keccak(text=MODIFY_LIQUIDITY_SIG).hex()
 ZERO_ADDR = "0x" + "0" * 40
 DYNAMIC_FEE_FLAG = 0x800000  # V4 LPFeeLibrary.DYNAMIC_FEE_FLAG
 LIQ_THRESHOLDS_SEC = (0, 60, 600, 3600, 86400)
+
+# span büyütme/küçültme ayarları
+_GROW_AFTER_START = 10     # bu kadar ardışık başarıdan sonra span büyütülür
+_GROW_AFTER_CAP = 320      # her küçültmeden sonra bekleme ikiye katlanır, bu değere kadar
 
 # --- Logging ---
 log = logging.getLogger("counter")
@@ -139,43 +169,129 @@ class RPCError(Exception):
         self.err = err
 
 
+def _is_rate_limit(e: RPCError) -> bool:
+    m = str(e).lower()
+    return "rate limit" in m or "rate-limit" in m or "too many requests" in m or "throttl" in m
+
+
 def _is_range_error(e: RPCError) -> bool:
+    if _is_rate_limit(e):
+        return False  # rate limit span'i küçültmekle çözülmez; bekleyip tekrar denenir
     m = str(e).lower()
     return any(k in m for k in (
-        "range", "limit", "too many", "exceed", "too large", "10000", "response size", "more than",
+        "range", "limit", "too many", "exceed", "too large", "10000",
+        "response size", "more than", "block range", "query returned",
     ))
+
+
+def _retry_after_sec(r: httpx.Response, default: float) -> float:
+    try:
+        v = float(r.headers.get("retry-after", ""))
+        return min(max(v, 0.5), 60.0)
+    except (ValueError, TypeError):
+        return default
+
+
+def _backoff(attempt: int) -> float:
+    return 2 ** attempt + random.random()  # jitter: aynı anda tekrar deneme fırtınasını önler
 
 
 class RPC:
     def __init__(self, url: str, timeout: float = 30):
         self.url = url
-        self.client = httpx.AsyncClient(timeout=timeout)  # tek client, bağlantı yeniden kullanılır
+        self.client = httpx.AsyncClient(timeout=timeout)
         self._id = 0
         self.max_span = MAX_BLOCK_RANGE
         self._ts: dict[int, int] = {}
+        self._alchemy_400_logged = False
+        self._ok_streak = 0
+        self._grow_after = _GROW_AFTER_START
 
     async def aclose(self):
         await self.client.aclose()
 
+    # --- span yönetimi ---
+    def shrink_span(self, span: int) -> int:
+        self.max_span = max(1, span // 2)
+        self._ok_streak = 0
+        self._grow_after = min(self._grow_after * 2, _GROW_AFTER_CAP)
+        return self.max_span
+
+    def note_success(self, span_used: int):
+        """Ardışık başarılardan sonra span'i yavaşça büyüt (MAX_BLOCK_RANGE tavanına kadar)."""
+        # Yalnızca gerçekten tam span kullanıldıysa say (kısa kuyruk parçaları kanıt değildir).
+        if span_used < self.max_span:
+            return
+        self._ok_streak += 1
+        if self._ok_streak >= self._grow_after and self.max_span < MAX_BLOCK_RANGE:
+            old = self.max_span
+            self.max_span = min(MAX_BLOCK_RANGE, int(old * 1.5) + 1)
+            self._ok_streak = 0
+            log.info("getLogs aralığı büyütüldü: %d → %d blok", old, self.max_span)
+
     async def call(self, method: str, params: list, retries: int = 4):
+        """JSON-RPC çağrısı.
+
+        Retry politikası:
+          * Taşıma hataları (httpx.TransportError: bağlantı/zaman aşımı/okuma vb.) → retry
+          * HTTP 429 (rate limit) → retry (Retry-After'a uyar)
+          * HTTP 5xx → retry
+          * HTTP 4xx (429 hariç) → KALICI hata, hemen çık (HTTPStatusError raise)
+          * JSON parse hatası → retry
+          * JSON-RPC error → RPCError raise (rate-limit türü olanlar retry'lanır)
+        """
         for attempt in range(retries + 1):
+            # 1) HTTP isteği (ağ hataları retry'lanır)
             try:
                 self._id += 1
                 r = await self.client.post(self.url, json={
                     "jsonrpc": "2.0", "id": self._id, "method": method, "params": params,
                 })
-                r.raise_for_status()
-                data = r.json()
-            except (httpx.HTTPError, ValueError) as e:  # 429/5xx/ağ/JSON dışı yanıt
+            except httpx.TransportError as e:
                 if attempt == retries:
                     raise
-                wait = 2 ** attempt
-                log.warning("%s geçici hata: %s (%s) — %ds sonra tekrar", method, e, type(e).__name__, wait)
+                wait = _backoff(attempt)
+                log.warning("%s ağ hatası: %s — %.1fs sonra tekrar", method, type(e).__name__, wait)
                 await asyncio.sleep(wait)
                 continue
+
+            # 2) HTTP durum kodu kontrolü
+            if r.status_code >= 400:
+                snippet = (r.text or "").strip().replace("\n", " ")[:300]
+                # 429 veya 5xx → retry
+                if r.status_code == 429 or r.status_code >= 500:
+                    if attempt < retries:
+                        wait = _retry_after_sec(r, _backoff(attempt)) if r.status_code == 429 else _backoff(attempt)
+                        log.warning("%s HTTP %d → %.1fs sonra tekrar | %s",
+                                    method, r.status_code, wait, snippet)
+                        await asyncio.sleep(wait)
+                        continue
+                # 4xx (429 hariç) veya retry tükendi → kalıcı hata
+                log.warning("%s HTTP %d (kalıcı): %s", method, r.status_code, snippet)
+                r.raise_for_status()
+
+            # 3) JSON parse
+            try:
+                data = r.json()
+            except ValueError as e:
+                if attempt == retries:
+                    raise
+                wait = _backoff(attempt)
+                log.warning("%s JSON parse hatası: %s — %.1fs sonra tekrar", method, e, wait)
+                await asyncio.sleep(wait)
+                continue
+
+            # 4) JSON-RPC error
             if "error" in data:
-                raise RPCError(data["error"])
+                err = RPCError(data["error"])
+                if _is_rate_limit(err) and attempt < retries:
+                    wait = _backoff(attempt)
+                    log.warning("%s JSON-RPC rate limit → %.1fs sonra tekrar", method, wait)
+                    await asyncio.sleep(wait)
+                    continue
+                raise err
             return data["result"]
+        raise RuntimeError(f"{method}: retry döngüsü beklenmedik şekilde bitti")  # erişilmemeli
 
     async def block_number(self) -> int:
         return int(await self.call("eth_blockNumber", []), 16)
@@ -187,14 +303,32 @@ class RPC:
         if not blk:
             raise RuntimeError(f"blok bulunamadı: {number}")
         ts = int(blk["timestamp"], 16)
-        if len(self._ts) > 5000:
+        if len(self._ts) > 20000:
             self._ts.clear()
         self._ts[number] = ts
         return ts
 
+    async def prefetch_ts(self, blocks: set[int]):
+        """Eksik blok zaman damgalarını sınırlı paralellikle önceden çek (backfill hızlandırır)."""
+        missing = [b for b in blocks if b not in self._ts]
+        if len(missing) < 2:
+            return  # tek blok için paralellik kazanç sağlamaz; block_ts tembel çeker
+        sem = asyncio.Semaphore(max(1, TS_PREFETCH_CONCURRENCY))
+
+        async def one(b: int):
+            async with sem:
+                await self.block_ts(b)
+
+        await asyncio.gather(*(one(b) for b in missing))
+
 
 async def iter_log_chunks(rpc: RPC, start: int, end: int):
-    """[start, end] aralığını parça parça getirir; RPC 'aralık çok büyük' derse parçayı küçültür."""
+    """[start, end] aralığını parça parça getirir.
+
+    RPC sağlayıcı 'aralık çok büyük' derse (JSON-RPC error veya HTTP 400)
+    parçayı küçültür. Alchemy gibi sağlayıcılar 400 Bad Request döndürebilir;
+    her iki durumu da ele alıyoruz. Başarılı çağrılar span'i yavaşça geri büyütür.
+    """
     topics = [[INITIALIZE_TOPIC, MODIFY_LIQUIDITY_TOPIC] if TRACK_LIQUIDITY else INITIALIZE_TOPIC]
     cur = start
     while cur <= end:
@@ -206,11 +340,31 @@ async def iter_log_chunks(rpc: RPC, start: int, end: int):
         try:
             res = await rpc.call("eth_getLogs", [flt])
         except RPCError as e:
+            # JSON-RPC seviyesinde range hatası
             if span > 1 and _is_range_error(e):
-                rpc.max_span = max(1, span // 2)
-                log.info("getLogs aralığı küçültüldü: %d → %d blok (%s)", span, rpc.max_span, e)
+                new = rpc.shrink_span(span)
+                log.info("getLogs aralığı küçültüldü (JSON-RPC): %d → %d blok (%s)", span, new, e)
                 continue
             raise
+        except httpx.HTTPStatusError as e:
+            # HTTP 400 Bad Request → Alchemy blok aralığını çok büyük buldu
+            status = e.response.status_code if e.response is not None else 0
+            body = ""
+            if e.response is not None:
+                body = (e.response.text or "").strip().replace("\n", " ")[:200]
+            if status == 400 and span > 1:
+                if not rpc._alchemy_400_logged:
+                    log.warning("HTTP 400 alındı, blok aralığı küçültülüyor. Sunucu yanıtı: %s", body)
+                    rpc._alchemy_400_logged = True
+                new = rpc.shrink_span(span)
+                log.info("getLogs aralığı küçültüldü (HTTP 400): %d → %d blok", span, new)
+                continue
+            # span=1'de bile 400 → bu sağlayıcı bu çağrıyı desteklemiyor
+            if status == 400 and span == 1:
+                log.error("HTTP 400, span=1'de bile. Bu RPC sağlayıcısı eth_getLogs "
+                          "desteklemiyor olabilir. Yanıt: %s", body)
+            raise
+        rpc.note_success(hi - cur + 1)
         yield cur, hi, res
         cur = hi + 1
 
@@ -248,12 +402,28 @@ def _read_jsonl(path: Path):
                 continue  # çökme anında yarım kalmış son satır
 
 
+def _ensure_trailing_newline(path: Path):
+    """Çökmeden yarım kalmış son satır varsa, sonraki kaydın onunla birleşmemesi için satırı kapat."""
+    try:
+        if path.exists() and path.stat().st_size > 0:
+            with open(path, "rb+") as f:
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.write(b"\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+    except OSError as e:
+        log.warning("JSONL sonu kontrol edilemedi (%s): %s", path, e)
+
+
 class Store:
     def __init__(self, d: Path):
         d.mkdir(parents=True, exist_ok=True)
+        self.dir = d
         self.events_path = d / "events.jsonl"
         self.liq_path = d / "liquidity.jsonl"
         self.ckpt_path = d / "checkpoint.json"
+        self.heartbeat_path = d / "heartbeat.json"
         self.pools: dict[str, dict] = {}
         self.first_liq: dict[str, dict] = {}
         self.keys: set[str] = set()
@@ -265,12 +435,37 @@ class Store:
         self.ckpt: dict | None = None
         if self.ckpt_path.exists():
             self.ckpt = json.loads(self.ckpt_path.read_text())
+        for p in (self.events_path, self.liq_path):
+            _ensure_trailing_newline(p)
+        self._fh: dict[Path, object] = {}
+        self._dirty = False
 
     def _append(self, path: Path, rec: dict):
-        with open(path, "a") as f:
-            f.write(json.dumps(rec) + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+        fh = self._fh.get(path)
+        if fh is None:
+            fh = self._fh[path] = open(path, "a")
+        fh.write(json.dumps(rec) + "\n")
+        self._dirty = True  # fsync commit() içinde, checkpoint'ten hemen önce
+
+    def commit(self):
+        """Bekleyen JSONL kayıtlarını diske garantile. Checkpoint ilerlemeden ÖNCE çağrılmalı."""
+        if not self._dirty:
+            return
+        for fh in self._fh.values():
+            fh.flush()
+            os.fsync(fh.fileno())
+        self._dirty = False
+
+    def close(self):
+        try:
+            self.commit()
+        finally:
+            for fh in self._fh.values():
+                try:
+                    fh.close()
+                except OSError:
+                    pass
+            self._fh.clear()
 
     def add_init(self, rec: dict):
         self._append(self.events_path, rec)
@@ -282,12 +477,38 @@ class Store:
         self.first_liq[rec["pool_id"]] = rec
 
     def save_ckpt(self):
+        self.commit()  # veri, checkpoint'ten önce kalıcı olmalı (aksi halde olay kaybı olurdu)
         _atomic_write_json(self.ckpt_path, self.ckpt)
+
+    def write_heartbeat(self, head: int, safe: int):
+        ck = self.ckpt or {}
+        nb = ck.get("next_block") or 0
+        try:
+            _atomic_write_json(self.heartbeat_path, {
+                "ts": int(time.time()),
+                "head": head,
+                "safe": safe,
+                "next_block": nb,
+                "lag_blocks": max(0, safe - nb + 1),
+                "pools": len(self.pools),
+                "errors": ck.get("counters", {}).get("errors", 0),
+            })
+        except OSError as e:
+            log.warning("heartbeat yazılamadı: %s", e)
 
 
 async def process_logs(rpc: RPC, store: Store, logs: list[dict]):
     logs.sort(key=lambda lg: (int(lg["blockNumber"], 16), int(lg["logIndex"], 16)))
     c = store.ckpt["counters"]
+
+    # Initialize bloklarının zaman damgalarını paralel çek (sıralı işleme sonuçları değiştirmez)
+    init_blocks = {
+        int(lg["blockNumber"], 16) for lg in logs
+        if not lg.get("removed") and lg["topics"][0].lower() == INITIALIZE_TOPIC
+    }
+    if init_blocks:
+        await rpc.prefetch_ts(init_blocks)
+
     for lg in logs:
         if lg.get("removed"):
             continue
@@ -342,16 +563,19 @@ async def poll_once(rpc: RPC, store: Store):
     safe = head - CONFIRMATIONS
     ck = store.ckpt
     if safe < ck["next_block"]:
+        store.write_heartbeat(head, safe)
         return
     async for lo, hi, logs in iter_log_chunks(rpc, ck["next_block"], safe):
         await process_logs(rpc, store, logs)
         ck["next_block"] = hi + 1
         ck["window_end_ts"] = await rpc.block_ts(hi)
-        store.save_ckpt()  # her parçadan sonra: uzun backfill yarıda kalırsa kaldığı yerden devam
+        store.save_ckpt()  # önce JSONL fsync, sonra checkpoint: yarıda kalan backfill kaldığı yerden devam eder
         if logs or hi - lo >= 1000:
-            log.info("blok %d→%d | %d log | toplam havuz=%d", lo, hi, len(logs), len(store.pools))
+            log.info("blok %d→%d | %d log | toplam havuz=%d (span=%d)",
+                     lo, hi, len(logs), len(store.pools), rpc.max_span)
     ck["counters"]["polls"] += 1
     store.save_ckpt()
+    store.write_heartbeat(head, safe)
 
 
 # --- Özet ---
@@ -363,6 +587,10 @@ def _pct(sorted_vals: list, p: float):
 
 def _utc_hour(ts: int) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:00Z")
+
+
+def _utc_day(ts: int) -> str:
+    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d")
 
 
 def compute_summary(store: Store) -> dict:
@@ -381,6 +609,8 @@ def compute_summary(store: Store) -> dict:
             hourly[_utc_hour(t)] = per_hour.get(_utc_hour(t), 0)
             t += 3600
     hour_of_day = Counter(datetime.fromtimestamp(r["ts"], timezone.utc).hour for r in pools)
+    # Günlük dağılım (kısmi ilk/son gün ayrı işaretlenmez; 'hourly' ile birlikte yorumlanmalı)
+    daily = dict(sorted(Counter(_utc_day(r["ts"]) for r in pools).items()))
 
     gaps = sorted(b["ts"] - a["ts"] for a, b in zip(pools, pools[1:]))
 
@@ -415,6 +645,7 @@ def compute_summary(store: Store) -> dict:
             }
         liq = {
             "pools_with_liquidity": len(deltas),
+            "pools_without_liquidity": n - len(deltas),  # EKLENDİ: pencere sonuna kadar hiç likidite görmeyenler
             "same_tx_as_init": sum(1 for p in pools if store.first_liq.get(p["pool_id"], {}).get("same_tx_as_init")),
             "median_sec_to_first_liquidity": _pct(deltas, 0.5),
             "p90_sec_to_first_liquidity": _pct(deltas, 0.9),
@@ -440,6 +671,7 @@ def compute_summary(store: Store) -> dict:
             "median": _pct(gaps, 0.5), "p90": _pct(gaps, 0.9), "max": gaps[-1] if gaps else None,
         },
         "hourly": hourly,
+        "daily": daily,
         "hour_of_day_utc": {str(h): hour_of_day.get(h, 0) for h in range(24)},
         "by_contract": dict(Counter(r["contract"] for r in pools)),
         "block_range_seen": {
@@ -462,20 +694,28 @@ def compute_summary(store: Store) -> dict:
         },
         "liquidity": liq,
         "runtime": ck.get("counters", {}),
+        "health": {"completed": None},  # write_summary doldurur
         "config": {
             "rpc": RPC_URL, "initialize_topic": INITIALIZE_TOPIC,
             "modify_liquidity_topic": MODIFY_LIQUIDITY_TOPIC,
             "confirmations": CONFIRMATIONS, "poll_interval_sec": POLL_INTERVAL_SEC,
             "track_liquidity": TRACK_LIQUIDITY,
+            "final_max_span": None,  # write_summary doldurur
         },
     }
 
 
-def write_summary(store: Store):
+def write_summary(store: Store, rpc: RPC | None = None, *, quiet: bool = False,
+                  completed: bool | None = None):
     if not store.ckpt:
         return
     summary = compute_summary(store)
+    if rpc is not None:
+        summary["config"]["final_max_span"] = rpc.max_span
+    summary["health"]["completed"] = completed  # True: temiz bitti, False: hata/erken çıkış, None: ara özet
     _atomic_write_json(Path(SUMMARY_FILE), summary)
+    if quiet:
+        return
     log.info("=" * 60)
     log.info("ÖZET | pencere=%.2fsa | havuz=%d | %s/gün | güvenilir=%s",
              summary["window"]["hours"], summary["total_initialize"],
@@ -503,6 +743,8 @@ async def run() -> int:
     _install_signals(stop)
     store = Store(DATA_DIR)
     rpc = RPC(RPC_URL)
+    exit_code = 0
+    completed: bool | None = None
     try:
         chain_id = int(await rpc.call("eth_chainId", []), 16)
         if chain_id != EXPECTED_CHAIN_ID:
@@ -550,24 +792,45 @@ async def run() -> int:
         consecutive_errors = 0
 
         while True:
+            poll_ok = False
             try:
                 await poll_once(rpc, store)
                 consecutive_errors = 0
+                poll_ok = True
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 consecutive_errors += 1
                 store.ckpt["counters"]["errors"] += 1
-                log.warning("poll hatası: %s (%s) [üst üste %d]", e, type(e).__name__, consecutive_errors)
+                log.warning("poll hatası: %s (%s) [üst üste %d]",
+                            str(e).splitlines()[0][:120], type(e).__name__, consecutive_errors)
 
-            if stop.is_set() or time.time() >= end_at:
+            if stop.is_set():
+                completed = poll_ok
                 break
+            if time.time() >= end_at:
+                # Süre doldu. Son poll başarılıysa temiz çık; hata varsa (sonlu/backfill modda
+                # veri eksik kalmasın diye) MAX_CONSECUTIVE_ERRORS'a kadar tekrar dene.
+                if poll_ok:
+                    completed = True
+                    break
+                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                    log.error("Süre doldu ama %d üst üste hata: ölçüm tamamlanamadı. "
+                              "Aynı komutu tekrar çalıştır; checkpoint'ten devam eder.", consecutive_errors)
+                    completed = False
+                    exit_code = 3
+                    break
             if time.time() - last_progress > PROGRESS_INTERVAL_SEC:
                 ck = store.ckpt
                 hrs = max((ck["window_end_ts"] - ck["window_start_ts"]) / 3600, 1e-9)
-                log.info("--- PROGRESS | pencere %.2fsa | havuz=%d | %.1f/gün | likiditeli=%d | hata=%d ---",
+                log.info("--- PROGRESS | pencere %.2fsa | havuz=%d | %.1f/gün | likiditeli=%d | "
+                         "span=%d | hata=%d ---",
                          hrs, len(store.pools), len(store.pools) / hrs * 24,
-                         len(store.first_liq), ck["counters"]["errors"])
+                         len(store.first_liq), rpc.max_span, ck["counters"]["errors"])
+                try:
+                    write_summary(store, rpc, quiet=True)  # kısmi özet: süreç öldürülse bile elde bir şey kalır
+                except Exception as e:  # özet hatası ölçümü durdurmamalı
+                    log.warning("ara özet yazılamadı: %s", e)
                 last_progress = time.time()
 
             wait = min(120.0, POLL_INTERVAL_SEC * (2 ** min(consecutive_errors, 4)))
@@ -575,17 +838,69 @@ async def run() -> int:
                 await asyncio.wait_for(stop.wait(), timeout=wait)
             except asyncio.TimeoutError:
                 pass
-        return 0
+        return exit_code
     finally:
         try:
             if store.ckpt:
                 store.save_ckpt()
-            write_summary(store)
+            write_summary(store, rpc, completed=completed if completed is not None else False)
         finally:
-            await rpc.aclose()
+            try:
+                store.close()
+            finally:
+                await rpc.aclose()
+
+
+# --- Çevrimdışı self-test (ağ yok) ---
+def selftest() -> int:
+    def pad_addr(a: str) -> str:
+        return "0x" + a[2:].rjust(64, "0")
+
+    def w(v: int) -> str:
+        return format(v & ((1 << 256) - 1), "064x")
+
+    c0, c1 = "0x" + "00" * 20, "0x" + "ab" * 20
+    hook = "0x" + "cd" * 20
+    init_log = {
+        "topics": [INITIALIZE_TOPIC, "0x" + "11" * 32, pad_addr(c0), pad_addr(c1)],
+        "data": "0x" + w(3000) + w(60) + w(int(hook, 16)) + w(79228162514264337593543950336) + w(-5),
+    }
+    d = decode_initialize(init_log)
+    assert d and d["fee"] == 3000 and d["tick_spacing"] == 60 and d["tick"] == -5, d
+    assert d["hooks"] == hook and d["currency1"] == c1 and d["currency0"] == c0, d
+
+    liq_log = {
+        "topics": [MODIFY_LIQUIDITY_TOPIC, "0x" + "11" * 32, pad_addr(c1)],
+        "data": "0x" + w(-120) + w(120) + w(10**18) + w(0),
+    }
+    m = decode_modify_liquidity(liq_log)
+    assert m and m["tick_lower"] == -120 and m["tick_upper"] == 120 and m["liquidity_delta"] == 10**18, m
+
+    assert decode_initialize({"topics": [], "data": "0x"}) is None
+    assert INITIALIZE_TOPIC != MODIFY_LIQUIDITY_TOPIC and len(INITIALIZE_TOPIC) == 66
+
+    # hata sınıflandırma
+    assert _is_range_error(RPCError({"code": -32005, "message": "query returned more than 10000 results"}))
+    assert not _is_range_error(RPCError({"code": 429, "message": "rate limit exceeded"}))
+    assert _is_rate_limit(RPCError({"message": "Too Many Requests"}))
+
+    # span küçültme / büyütme
+    class _R(RPC):
+        def __init__(self):
+            self.max_span, self._ok_streak, self._grow_after = 1000, 0, _GROW_AFTER_START
+
+    r = _R()
+    assert r.shrink_span(1000) == 500 and r._grow_after == 2 * _GROW_AFTER_START
+    for _ in range(r._grow_after):
+        r.note_success(r.max_span)
+    assert r.max_span > 500
+    print("selftest OK")
+    return 0
 
 
 def main():
+    if "--selftest" in sys.argv[1:]:
+        sys.exit(selftest())
     setup_logging()
     try:
         sys.exit(asyncio.run(run()))

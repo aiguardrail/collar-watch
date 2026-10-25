@@ -15,7 +15,7 @@ on:
 jobs:
   sample:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -30,10 +30,10 @@ jobs:
           BACKFILL_HOURS: ${{ inputs.backfill_hours }}
           DURATION_HOURS: "0"
           TRACK_LIQUIDITY: "1"
-          RPC_RPS: "5"
-          BATCH_SIZE: "25"
+          RPC_RPS: "25"
+          BATCH_SIZE: "50"
           MAX_BLOCK_RANGE: "5000"
-          ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
+          ROBINHOOD_RPC: "https://robinhood-mainnet.g.alchemy.com/v2/alch_8WgIV_vA7hZu0BALfKfhU"
           EXPECTED_CHAIN_ID: "4663"
         run: python -m collar_watch.counter
 

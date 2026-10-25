@@ -1,0 +1,67 @@
+name: Sample Pools
+
+on:
+  workflow_dispatch:
+    inputs:
+      backfill_hours:
+        description: "Backfill saat (72 = 3 gün)"
+        required: false
+        default: "72"
+      sample_rate:
+        description: "Örneklem oranı (0.015 = %1.5)"
+        required: false
+        default: "0.015"
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: Backfill
+        env:
+          POOL_MANAGER: "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+          BACKFILL_HOURS: ${{ inputs.backfill_hours }}
+          DURATION_HOURS: "0"
+          TRACK_LIQUIDITY: "1"
+          RPC_RPS: "5"
+          BATCH_SIZE: "25"
+          MAX_BLOCK_RANGE: "5000"
+          ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
+          EXPECTED_CHAIN_ID: "4663"
+        run: python -m collar_watch.counter
+
+      - name: Sample
+        env:
+          SAMPLE_RATE: ${{ inputs.sample_rate }}
+          SEED: "42"
+        run: python -m collar_watch.sampler
+
+      - name: Show result
+        if: always()
+        run: |
+          echo "=== sampled-pools.jsonl (ilk 5) ==="
+          head -5 sampled-pools.jsonl || echo "(yok)"
+          echo ""
+          echo "=== satır sayısı ==="
+          wc -l sampled-pools.jsonl || echo "(yok)"
+          echo ""
+          echo "=== summary ==="
+          cat counter-summary.json 2>/dev/null | head -50 || echo "(yok)"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sampled-pools
+          path: |
+            sampled-pools.jsonl
+            counter-summary.json
+            counter.log
+            data/events.jsonl

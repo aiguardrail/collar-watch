@@ -1,7 +1,7 @@
 name: Counter Test (3 min)
 
 on:
-  workflow_dispatch:  # manuel tetikleme
+  workflow_dispatch:
 
 jobs:
   measure:
@@ -15,19 +15,31 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install package
         run: |
           python -m pip install --upgrade pip
-          pip install websockets httpx eth-utils python-dotenv
+          pip install -e .
 
       - name: Run counter (3 min, discovery mode)
         env:
           POOL_MANAGER: ""
           DURATION_HOURS: "0.05"
           ROBINHOOD_WSS: "wss://feed.mainnet.chain.robinhood.com"
+          ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
         run: |
-          cd src
           python -m collar_watch.counter
+
+      - name: Show summary
+        if: always()
+        run: |
+          echo "=== counter-summary.json ==="
+          cat counter-summary.json || echo "(yok)"
+          echo ""
+          echo "=== counter.log (ilk 15) ==="
+          head -15 counter.log || echo "(yok)"
+          echo ""
+          echo "=== counter.log (son 15) ==="
+          tail -15 counter.log || echo "(yok)"
 
       - name: Upload result
         if: always()

@@ -2,7 +2,7 @@
 Aşama 0: 24-48 saatlik havuz sıklığı ölçümü.
 Hiçbir Collar çağrısı yapmaz, sadece Uniswap V4 Initialize olaylarını sayar.
 
-Önce WSS (eth_subscribe) dener. Başarısız olursa HTTP polling'e geçer.
+Önce WSS dener. Başarısız olursa HTTP polling'e geçer.
 
 Kullanım:
     python -m collar_watch.counter                      # 24 saat
@@ -59,12 +59,12 @@ def process_event(ev, state):
     )
 
 
-def heartbeat(state, start):
+def heartbeat(state, start, label="HEARTBEAT"):
     elapsed_h = (time.time() - start) / 3600
     rate = state["total"] / elapsed_h if elapsed_h > 0 else 0
     log.info(
-        "--- HEARTBEAT | %.2fh | total=%d | %.1f/saat | %.1f/gün ---",
-        elapsed_h, state["total"], rate, rate * 24,
+        "--- %s | %.2fh | total=%d | %.1f/saat | %.1f/gün ---",
+        label, elapsed_h, state["total"], rate, rate * 24,
     )
 
 
@@ -82,8 +82,10 @@ async def run_wss(start, end, state):
         }))
         resp = json.loads(await ws.recv())
         if "error" in resp:
-            raise RuntimeError(f"Subscribe failed: {resp['error']}")
-        sub_id = resp["result"]
+            raise RuntimeError(f"Subscribe rejected: {resp['error']}")
+        sub_id = resp.get("result")
+        if not sub_id:
+            raise RuntimeError(f"Subscribe no result: {resp}")
         log.info("WSS abone olundu: %s", sub_id)
         state["mode"] = "wss"
 
@@ -102,48 +104,63 @@ async def run_wss(start, end, state):
                 last_heartbeat = time.time()
 
 
+async def _rpc_call(client, method, params):
+    r = await client.post(RPC, json={
+        "jsonrpc": "2.0", "id": 1, "method": method, "params": params,
+    })
+    data = r.json()
+    if "error" in data:
+        raise RuntimeError(f"{method} error: {data['error']}")
+    return data["result"]
+
+
 async def run_polling(start, end, state):
     log.info("HTTP polling modu (her %.0f saniyede bir eth_getLogs)", POLL_INTERVAL_SEC)
     state["mode"] = "http-polling"
 
     async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.post(RPC, json={
-            "jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": [],
-        })
-        last_block = int(r.json()["result"], 16)
+        try:
+            last_block = int(await _rpc_call(client, "eth_blockNumber", []), 16)
+        except Exception as e:
+            log.error("RPC bağlantısı başarısız: %s", e)
+            return
         log.info("Başlangıç bloğu: %d", last_block)
 
     last_heartbeat = start
+    poll_count = 0
+
     while time.time() < end:
+        poll_count += 1
         try:
-            params = {
-                "fromBlock": hex(last_block + 1),
-                "toBlock": "latest",
-                "topics": [INITIALIZE_TOPIC],
-            }
-            if POOL_MANAGER:
-                params["address"] = POOL_MANAGER
-
             async with httpx.AsyncClient(timeout=30) as client:
-                r = await client.post(RPC, json={
-                    "jsonrpc": "2.0", "id": 1, "method": "eth_getLogs",
-                    "params": [params],
-                })
-                data = r.json()
+                current_block = int(await _rpc_call(client, "eth_blockNumber", []), 16)
 
-            if "error" in data:
-                log.warning("getLogs error: %s", data["error"])
-            else:
-                for ev in data["result"]:
-                    process_event(ev, state)
-                    last_block = max(last_block, int(ev["blockNumber"], 16))
+                if current_block <= last_block:
+                    log.info("poll #%d | blok değişmedi (%d)", poll_count, current_block)
+                else:
+                    params = {
+                        "fromBlock": hex(last_block + 1),
+                        "toBlock": hex(current_block),
+                        "topics": [INITIALIZE_TOPIC],
+                    }
+                    if POOL_MANAGER:
+                        params["address"] = POOL_MANAGER
 
-            if time.time() - last_heartbeat > 600:
-                heartbeat(state, start)
-                last_heartbeat = time.time()
+                    events = await _rpc_call(client, "eth_getLogs", [params])
+                    log.info(
+                        "poll #%d | blok %d→%d | %d event",
+                        poll_count, last_block + 1, current_block, len(events),
+                    )
+                    for ev in events:
+                        process_event(ev, state)
+                    last_block = current_block
 
         except Exception as e:
-            log.warning("polling hatası: %s", e)
+            log.warning("poll #%d hatası: %s (%s)", poll_count, e, type(e).__name__)
+
+        if time.time() - last_heartbeat > 600:
+            heartbeat(state, start)
+            last_heartbeat = time.time()
 
         await asyncio.sleep(POLL_INTERVAL_SEC)
 
@@ -152,7 +169,7 @@ def write_summary(start, state):
     elapsed_h = (time.time() - start) / 3600
     summary = {
         "measured_at": datetime.now(timezone.utc).isoformat(),
-        "duration_hours": round(elapsed_h, 2),
+        "duration_hours": round(elapsed_h, 4),
         "mode": state["mode"],
         "contract_filter": POOL_MANAGER or None,
         "total_events": state["total"],
@@ -195,11 +212,13 @@ async def run():
     log.info("=" * 60)
 
     try:
-        await run_wss(start, end, state)
-    except (RuntimeError, ConnectionError, OSError) as e:
-        log.warning("WSS başarısız: %s", e)
-        log.info("HTTP polling'e geçiliyor")
-        await run_polling(start, end, state)
+        try:
+            await run_wss(start, end, state)
+            log.info("WSS akışı normal bitti")
+        except Exception as e:
+            log.warning("WSS başarısız: %s (%s)", e, type(e).__name__)
+            log.info("HTTP polling'e geçiliyor")
+            await run_polling(start, end, state)
     finally:
         write_summary(start, state)
 

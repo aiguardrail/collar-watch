@@ -1,0 +1,52 @@
+name: Live Sampler (T0 + T3m)
+
+on:
+  schedule:
+    - cron: "7 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: live-sampler
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run live sampler
+        env:
+          COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
+          POOL_MANAGER: ${{ vars.POOL_MANAGER }}
+          QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
+          HOOK_LABELS: ${{ vars.HOOK_LABELS }}
+          MAX_RUNTIME_SEC: "1800"
+        run: |
+          source .github/scripts/databranch.sh
+          setup_data_branch
+
+          export EVENTS="$PWD/data/live-events.jsonl"
+          export STATE="$PWD/data/live-state.json"
+
+          python -u -m collar_watch.live &
+          PID=$!
+
+          while kill -0 "$PID" 2>/dev/null; do
+            sleep 300
+            commit_push live-events.jsonl live-state.json
+          done
+
+          wait "$PID"
+          commit_push live-events.jsonl live-state.json

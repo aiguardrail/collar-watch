@@ -1,0 +1,39 @@
+name: Counter Test (3 min)
+
+on:
+  workflow_dispatch:  # manuel tetikleme
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install websockets httpx eth-utils python-dotenv
+
+      - name: Run counter (3 min, discovery mode)
+        env:
+          POOL_MANAGER: ""
+          DURATION_HOURS: "0.05"
+          ROBINHOOD_WSS: "wss://feed.mainnet.chain.robinhood.com"
+        run: |
+          cd src
+          python -m collar_watch.counter
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: counter-result
+          path: |
+            counter.log
+            counter-summary.json

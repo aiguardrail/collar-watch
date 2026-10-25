@@ -2,24 +2,12 @@
 
 Observer bot that watches new Uniswap V4 pools on Robinhood Chain and evaluates them with Collar Guardrail.
 
-**Current stage:** Aşama 0 — measuring pool frequency. No trades, no UI. Just counting.
+**Current stage:** Aşama 0 → C. Ölçüm + örneklem hazır. Collar entegrasyonu sonraki adım.
 
-## How it works
+## Ne yapıyor
 
-1. Connects to Robinhood Chain (WSS first, HTTP polling fallback)
-2. Listens for `Initialize(bytes32,address,address,uint24,int24,address,uint160,int24)` events on Uniswap V4 PoolManager
-3. Logs each event (contract, block, tx) and writes a summary at the end
+1. **`counter.py`** — Robinhood Chain'de Uniswap V4 `Initialize` (yeni havuz) ve `ModifyLiquidity` (likidite) olaylarını `eth_getLogs` ile okur. WSS yok (zincir `eth_subscribe` desteklemiyor). Kalıcı: `events.jsonl` + `liquidity.jsonl` + `checkpoint.json`. Çökerse kaldığı yerden devam eder. `BACKFILL_HOURS` ile geçmişi saniyeler içinde tarar.
+2. **`sampler.py`** — `events.jsonl`'ı okur, quote asset'leri (USDG/WETH/…) filtreler, `SAMPLE_RATE` ile deterministik örneklem yapar, `sampled-pools.jsonl` üretir. **Collar'a çağrı yapmaz.**
+3. **(sonraki adım)** — `collar.py` — `sampled-pools.jsonl`'daki havuzlara T+0 ve T+3dk'da `check_token_safety` çağrısı. Sonuç `evaluations.jsonl`'a.
 
-## Run via GitHub Actions
-
-1. **Actions** tab → **Counter Test (3 min)** → **Run workflow**
-2. Wait ~3 minutes
-3. Download the **counter-result** artifact
-
-## Local run
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cp .env.example .env
-DURATION_HOURS=0.05 POOL_MANAGER= python -m collar_watch.counter
+## Repo yapısı

@@ -2,11 +2,16 @@ name: Counter Backfill (7d)
 
 on:
   workflow_dispatch:
+    inputs:
+      backfill_hours:
+        description: "Backfill saat (168 = 7 gün, 48 = 2 gün)"
+        required: false
+        default: "168"
 
 jobs:
   measure:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +25,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Backfill last 7 days
+      - name: Backfill
         env:
           POOL_MANAGER: "0x8366a39cc670b4001a1121b8f6a443a643e40951"
-          BACKFILL_HOURS: "168"
+          BACKFILL_HOURS: ${{ inputs.backfill_hours }}
           DURATION_HOURS: "0"
-          TRACK_LIQUIDITY: "1"
+          TRACK_LIQUIDITY: "0"
+          RPC_RPS: "5"
+          BATCH_SIZE: "25"
           MAX_BLOCK_RANGE: "5000"
+          TS_PREFETCH_CONCURRENCY: "1"
           ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
           EXPECTED_CHAIN_ID: "4663"
         run: python -m collar_watch.counter
@@ -47,7 +55,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: counter-backfill-7d
+          name: counter-backfill
           path: |
             counter.log
             counter-summary.json

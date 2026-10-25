@@ -1,0 +1,126 @@
+name: Test sell_simulation_ok Fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      contract_address:
+        description: "Test edilecek token adresi"
+        required: true
+        default: "0x72b33ff4d663a237a75e3e2cc20aef9ee4671e18"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install httpx
+        run: pip install httpx
+
+      - name: Test MCP check_token_safety
+        env:
+          TOKEN: ${{ inputs.contract_address }}
+          COLLAR_URL: "https://api.collarguardrail.com/mcp-http/mcp"
+        run: |
+          python - <<'PY'
+          import os, json, httpx
+
+          token = os.environ["TOKEN"]
+          url = os.environ["COLLAR_URL"]
+
+          payload = {
+              "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+              "params": {
+                  "name": "check_token_safety",
+                  "arguments": {"contract_address": token},
+              },
+          }
+          headers = {
+              "Content-Type": "application/json",
+              "Accept": "application/json, text/event-stream",
+          }
+
+          print(f"=== TEST ===")
+          print(f"token: {token}")
+          print(f"url: {url}")
+          print()
+
+          r = httpx.post(url, headers=headers, json=payload, timeout=30)
+          print(f"HTTP status: {r.status_code}")
+          print(f"Content-Type: {r.headers.get('content-type')}")
+          print()
+
+          # SSE parse
+          ctype = r.headers.get("content-type", "")
+          if "text/event-stream" in ctype:
+              data_lines = [l[5:].strip() for l in r.text.splitlines() if l.startswith("data:")]
+              data = None
+              for raw in reversed(data_lines):
+                  try:
+                      obj = json.loads(raw)
+                      if isinstance(obj, dict) and ("result" in obj or "error" in obj):
+                          data = obj
+                          break
+                  except json.JSONDecodeError:
+                      continue
+              if data is None:
+                  print("SSE parse FAILED")
+                  print(f"raw body[:500]: {r.text[:500]!r}")
+                  raise SystemExit(1)
+          else:
+              data = r.json()
+
+          print(f"=== JSON-RPC response ===")
+          print(json.dumps(data, indent=2)[:1500])
+          print()
+
+          # Extract tool result
+          result = data.get("result", {})
+          if result.get("isError"):
+              print("!! tool returned isError=true")
+              print(result)
+              raise SystemExit(1)
+
+          content = result.get("content", [])
+          if not content or content[0].get("type") != "text":
+              print("!! no text content")
+              raise SystemExit(1)
+
+          inner = json.loads(content[0]["text"])
+
+          print("=== Parsed CheckTokenSafetyOutput ===")
+          print(json.dumps(inner, indent=2))
+          print()
+
+          # Assertions
+          checks = []
+          checks.append(("severity present", "severity" in inner))
+          checks.append(("severity valid", inner.get("severity") in ("safe", "warn", "danger")))
+          checks.append(("sell_simulation_ok present", "sell_simulation_ok" in inner))
+          checks.append(("sell_simulation_ok is bool", isinstance(inner.get("sell_simulation_ok"), bool)))
+
+          print("=== Checks ===")
+          ok = True
+          for name, passed in checks:
+              mark = "PASS" if passed else "FAIL"
+              print(f"  [{mark}] {name}")
+              if not passed:
+                  ok = False
+
+          print()
+          if ok:
+              print("ALL CHECKS PASSED")
+              print(f"sell_simulation_ok = {inner.get('sell_simulation_ok')}")
+          else:
+              print("SOME CHECKS FAILED")
+              print(f"actual sell_simulation_ok = {inner.get('sell_simulation_ok')!r}")
+              print(f"actual keys = {list(inner.keys())}")
+              raise SystemExit(1)
+          PY

@@ -1,231 +1,594 @@
 """
-Aşama 0: 24-48 saatlik havuz sıklığı ölçümü.
-Hiçbir Collar çağrısı yapmaz, sadece Uniswap V4 Initialize olaylarını sayar.
+Aşama 0 — Robinhood Chain'de Uniswap V4 havuz sıklığı ölçümü.
+Hiçbir Collar çağrısı yapmaz; sadece zincirden okur.
 
-Önce WSS dener. Başarısız olursa HTTP polling'e geçer.
+Neler yapar:
+  * Initialize olaylarını eth_getLogs ile (blok aralığı, parça parça) okur.
+    Robinhood Chain eth_subscribe desteklemediği için WSS yok; polling tek yoldur.
+  * Her olayı çözer: poolId, currency0/1, fee, tickSpacing, hooks, sqrtPriceX96, tick.
+  * İsteğe bağlı: ModifyLiquidity ile havuzun İLK likiditesinin ne zaman eklendiğini ölçer
+    (Aşama 1'de T+0 değerlendirmesinde likidite var mı sorusunu cevaplar).
+  * Kalıcıdır: events.jsonl + checkpoint.json. Çökerse/yeniden başlatılırsa kaldığı
+    bloktan devam eder, aradaki boşluğu geriye dönük doldurur.
+  * Geriye dönük ölçüm: BACKFILL_HOURS ile geçmiş günleri dakikalar içinde ölçer.
 
 Kullanım:
-    python -m collar_watch.counter                      # 24 saat
-    DURATION_HOURS=0.05 python -m collar_watch.counter  # 3 dakikalık test
-    POOL_MANAGER=0x... python -m collar_watch.counter   # belirli kontrat
-    POOL_MANAGER= python -m collar_watch.counter        # keşif modu
+    python -m collar_watch.counter                                  # 24 saat canlı
+    BACKFILL_HOURS=168 DURATION_HOURS=0 python -m collar_watch.counter   # son 7 günü tara, çık
+    BACKFILL_HOURS=48 DURATION_HOURS=24 python -m collar_watch.counter   # 48s geçmiş + 24s canlı
+    START_BLOCK=1234567 DURATION_HOURS=0 python -m collar_watch.counter  # belirli bloktan
+    POOL_MANAGER=0x... python -m collar_watch.counter                    # tek kontrat filtresi
+    DATA_DIR=run2 python -m collar_watch.counter                         # yeni, temiz ölçüm
+
+Ortam değişkenleri:
+    ROBINHOOD_RPC, POOL_MANAGER, DURATION_HOURS, BACKFILL_HOURS, START_BLOCK,
+    POLL_INTERVAL_SEC (15), CONFIRMATIONS (2), MAX_BLOCK_RANGE (5000),
+    TRACK_LIQUIDITY (1), EXPECTED_CHAIN_ID (4663), DATA_DIR (data),
+    COUNTER_LOG (counter.log), COUNTER_SUMMARY (counter-summary.json),
+    PROGRESS_INTERVAL_SEC (900)
 """
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
+import signal
+import sys
 import time
-from collections import defaultdict
+from collections import Counter
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import httpx
-import websockets
 from eth_utils import keccak
 
 # --- Config ---
-WSS = os.getenv("ROBINHOOD_WSS", "wss://feed.mainnet.chain.robinhood.com")
-RPC = os.getenv("ROBINHOOD_RPC", "https://rpc.mainnet.chain.robinhood.com")
+RPC_URL = os.getenv("ROBINHOOD_RPC", "https://rpc.mainnet.chain.robinhood.com")
 POOL_MANAGER = os.getenv("POOL_MANAGER", "").strip().lower()
 DURATION_HOURS = float(os.getenv("DURATION_HOURS", "24"))
+BACKFILL_HOURS = float(os.getenv("BACKFILL_HOURS", "0"))
+START_BLOCK = os.getenv("START_BLOCK", "").strip()
+POLL_INTERVAL_SEC = float(os.getenv("POLL_INTERVAL_SEC", "15"))
+CONFIRMATIONS = int(os.getenv("CONFIRMATIONS", "2"))
+MAX_BLOCK_RANGE = int(os.getenv("MAX_BLOCK_RANGE", "5000"))
+TRACK_LIQUIDITY = os.getenv("TRACK_LIQUIDITY", "1") == "1"
+EXPECTED_CHAIN_ID = int(os.getenv("EXPECTED_CHAIN_ID", "4663"))
+DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 LOG_FILE = os.getenv("COUNTER_LOG", "counter.log")
 SUMMARY_FILE = os.getenv("COUNTER_SUMMARY", "counter-summary.json")
-POLL_INTERVAL_SEC = float(os.getenv("POLL_INTERVAL_SEC", "15"))
+PROGRESS_INTERVAL_SEC = float(os.getenv("PROGRESS_INTERVAL_SEC", "900"))
 
-# Uniswap V4 PoolManager.Initialize event
+# Uniswap V4 PoolManager olayları (kanonik imzalar: PoolId=bytes32, Currency=address)
 INITIALIZE_SIG = "Initialize(bytes32,address,address,uint24,int24,address,uint160,int24)"
+MODIFY_LIQUIDITY_SIG = "ModifyLiquidity(bytes32,address,int24,int24,int256,bytes32)"
 INITIALIZE_TOPIC = "0x" + keccak(text=INITIALIZE_SIG).hex()
+MODIFY_LIQUIDITY_TOPIC = "0x" + keccak(text=MODIFY_LIQUIDITY_SIG).hex()
+
+ZERO_ADDR = "0x" + "0" * 40
+DYNAMIC_FEE_FLAG = 0x800000  # V4 LPFeeLibrary.DYNAMIC_FEE_FLAG
+LIQ_THRESHOLDS_SEC = (0, 60, 600, 3600, 86400)
 
 # --- Logging ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)-7s %(message)s",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
-)
 log = logging.getLogger("counter")
 
 
-def process_event(ev, state):
-    state["total"] += 1
-    addr = ev["address"].lower()
-    state["by_address"][addr] += 1
-    block = int(ev["blockNumber"], 16)
-    state["recent_blocks"].append(block)
-    state["recent_blocks"] = state["recent_blocks"][-50:]
-    tx = ev.get("transactionHash", "")
-    tx = tx if isinstance(tx, str) else tx.hex()
-    log.info(
-        "EVENT #%d | contract=%s | block=%d | tx=%s",
-        state["total"], addr[:12], block, tx[:12],
+def setup_logging():
+    fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(message)s")
+    fh = RotatingFileHandler(LOG_FILE, maxBytes=5_000_000, backupCount=3)
+    sh = logging.StreamHandler()
+    for h in (fh, sh):
+        h.setFormatter(fmt)
+    log.setLevel(logging.INFO)
+    log.handlers[:] = [fh, sh]
+
+
+# --- ABI çözümleme ---
+def _words(data: str) -> list[str]:
+    h = data[2:] if data.startswith("0x") else data
+    return [h[i:i + 64] for i in range(0, len(h) - len(h) % 64, 64)]
+
+
+def _s256(word_hex: str) -> int:
+    v = int(word_hex, 16)
+    return v - (1 << 256) if v >= (1 << 255) else v
+
+
+def _addr_word(word_hex: str) -> str:
+    return "0x" + word_hex[-40:].lower()
+
+
+def _topic_addr(topic: str) -> str:
+    return "0x" + topic[-40:].lower()
+
+
+def decode_initialize(lg: dict) -> dict | None:
+    topics, w = lg.get("topics", []), _words(lg.get("data", "0x"))
+    if len(topics) < 4 or len(w) < 5:
+        return None
+    return {
+        "pool_id": topics[1].lower(),
+        "currency0": _topic_addr(topics[2]),
+        "currency1": _topic_addr(topics[3]),
+        "fee": int(w[0], 16),
+        "tick_spacing": _s256(w[1]),
+        "hooks": _addr_word(w[2]),
+        "sqrt_price_x96": str(int(w[3], 16)),  # string: JS tüketicilerde hassasiyet kaybı olmasın
+        "tick": _s256(w[4]),
+    }
+
+
+def decode_modify_liquidity(lg: dict) -> dict | None:
+    topics, w = lg.get("topics", []), _words(lg.get("data", "0x"))
+    if len(topics) < 3 or len(w) < 4:
+        return None
+    return {
+        "pool_id": topics[1].lower(),
+        "sender": _topic_addr(topics[2]),
+        "tick_lower": _s256(w[0]),
+        "tick_upper": _s256(w[1]),
+        "liquidity_delta": _s256(w[2]),
+    }
+
+
+# --- RPC istemcisi ---
+class RPCError(Exception):
+    def __init__(self, err):
+        super().__init__(str(err))
+        self.err = err
+
+
+def _is_range_error(e: RPCError) -> bool:
+    m = str(e).lower()
+    return any(k in m for k in (
+        "range", "limit", "too many", "exceed", "too large", "10000", "response size", "more than",
+    ))
+
+
+class RPC:
+    def __init__(self, url: str, timeout: float = 30):
+        self.url = url
+        self.client = httpx.AsyncClient(timeout=timeout)  # tek client, bağlantı yeniden kullanılır
+        self._id = 0
+        self.max_span = MAX_BLOCK_RANGE
+        self._ts: dict[int, int] = {}
+
+    async def aclose(self):
+        await self.client.aclose()
+
+    async def call(self, method: str, params: list, retries: int = 4):
+        for attempt in range(retries + 1):
+            try:
+                self._id += 1
+                r = await self.client.post(self.url, json={
+                    "jsonrpc": "2.0", "id": self._id, "method": method, "params": params,
+                })
+                r.raise_for_status()
+                data = r.json()
+            except (httpx.HTTPError, ValueError) as e:  # 429/5xx/ağ/JSON dışı yanıt
+                if attempt == retries:
+                    raise
+                wait = 2 ** attempt
+                log.warning("%s geçici hata: %s (%s) — %ds sonra tekrar", method, e, type(e).__name__, wait)
+                await asyncio.sleep(wait)
+                continue
+            if "error" in data:
+                raise RPCError(data["error"])
+            return data["result"]
+
+    async def block_number(self) -> int:
+        return int(await self.call("eth_blockNumber", []), 16)
+
+    async def block_ts(self, number: int) -> int:
+        if number in self._ts:
+            return self._ts[number]
+        blk = await self.call("eth_getBlockByNumber", [hex(number), False])
+        if not blk:
+            raise RuntimeError(f"blok bulunamadı: {number}")
+        ts = int(blk["timestamp"], 16)
+        if len(self._ts) > 5000:
+            self._ts.clear()
+        self._ts[number] = ts
+        return ts
+
+
+async def iter_log_chunks(rpc: RPC, start: int, end: int):
+    """[start, end] aralığını parça parça getirir; RPC 'aralık çok büyük' derse parçayı küçültür."""
+    topics = [[INITIALIZE_TOPIC, MODIFY_LIQUIDITY_TOPIC] if TRACK_LIQUIDITY else INITIALIZE_TOPIC]
+    cur = start
+    while cur <= end:
+        span = max(1, rpc.max_span)
+        hi = min(cur + span - 1, end)
+        flt = {"fromBlock": hex(cur), "toBlock": hex(hi), "topics": topics}
+        if POOL_MANAGER:
+            flt["address"] = POOL_MANAGER
+        try:
+            res = await rpc.call("eth_getLogs", [flt])
+        except RPCError as e:
+            if span > 1 and _is_range_error(e):
+                rpc.max_span = max(1, span // 2)
+                log.info("getLogs aralığı küçültüldü: %d → %d blok (%s)", span, rpc.max_span, e)
+                continue
+            raise
+        yield cur, hi, res
+        cur = hi + 1
+
+
+async def estimate_start_block(rpc: RPC, head: int, hours: float) -> int:
+    """Son ~50k bloktan ortalama blok süresini tahmin edip 'hours' saat öncesini bulur."""
+    sample = min(head, 50_000)
+    if sample < 100:
+        return 0
+    t_head, t_old = await rpc.block_ts(head), await rpc.block_ts(head - sample)
+    spb = (t_head - t_old) / sample
+    if spb <= 0:
+        raise RuntimeError("blok süresi tahmin edilemedi")
+    return max(0, head - int(hours * 3600 / spb))
+
+
+# --- Kalıcı durum ---
+def _atomic_write_json(path: Path, obj):
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def _read_jsonl(path: Path):
+    if not path.exists():
+        return
+    with open(path) as f:
+        for line in f:
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                continue  # çökme anında yarım kalmış son satır
+
+
+class Store:
+    def __init__(self, d: Path):
+        d.mkdir(parents=True, exist_ok=True)
+        self.events_path = d / "events.jsonl"
+        self.liq_path = d / "liquidity.jsonl"
+        self.ckpt_path = d / "checkpoint.json"
+        self.pools: dict[str, dict] = {}
+        self.first_liq: dict[str, dict] = {}
+        self.keys: set[str] = set()
+        for rec in _read_jsonl(self.events_path):
+            self.pools[rec["pool_id"]] = rec
+            self.keys.add(f'{rec["tx"]}:{rec["log_index"]}')
+        for rec in _read_jsonl(self.liq_path):
+            self.first_liq[rec["pool_id"]] = rec
+        self.ckpt: dict | None = None
+        if self.ckpt_path.exists():
+            self.ckpt = json.loads(self.ckpt_path.read_text())
+
+    def _append(self, path: Path, rec: dict):
+        with open(path, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+
+    def add_init(self, rec: dict):
+        self._append(self.events_path, rec)
+        self.pools[rec["pool_id"]] = rec
+        self.keys.add(f'{rec["tx"]}:{rec["log_index"]}')
+
+    def add_first_liq(self, rec: dict):
+        self._append(self.liq_path, rec)
+        self.first_liq[rec["pool_id"]] = rec
+
+    def save_ckpt(self):
+        _atomic_write_json(self.ckpt_path, self.ckpt)
+
+
+async def process_logs(rpc: RPC, store: Store, logs: list[dict]):
+    logs.sort(key=lambda lg: (int(lg["blockNumber"], 16), int(lg["logIndex"], 16)))
+    c = store.ckpt["counters"]
+    for lg in logs:
+        if lg.get("removed"):
+            continue
+        topic0 = lg["topics"][0].lower()
+        block = int(lg["blockNumber"], 16)
+        log_index = int(lg["logIndex"], 16)
+        tx = lg["transactionHash"]
+
+        if topic0 == INITIALIZE_TOPIC:
+            if f"{tx}:{log_index}" in store.keys:
+                continue  # tekrar (yeniden başlatma / örtüşen aralık)
+            dec = decode_initialize(lg)
+            if not dec:
+                log.warning("Initialize çözülemedi: tx=%s idx=%d", tx[:12], log_index)
+                continue
+            ts = await rpc.block_ts(block)
+            rec = {
+                "ts": ts, "block": block, "tx": tx, "log_index": log_index,
+                "contract": lg["address"].lower(), **dec,
+                "dynamic_fee": dec["fee"] == DYNAMIC_FEE_FLAG,
+                "has_hook": dec["hooks"] != ZERO_ADDR,
+                "native_pair": ZERO_ADDR in (dec["currency0"], dec["currency1"]),
+            }
+            store.add_init(rec)
+            lvl = logging.INFO if time.time() - ts < 600 else logging.DEBUG
+            log.log(lvl, "HAVUZ #%d | blok=%d | %s / %s | fee=%s hook=%s",
+                    len(store.pools), block, rec["currency0"][:10], rec["currency1"][:10],
+                    "dyn" if rec["dynamic_fee"] else rec["fee"],
+                    rec["hooks"][:10] if rec["has_hook"] else "-")
+
+        elif topic0 == MODIFY_LIQUIDITY_TOPIC and TRACK_LIQUIDITY:
+            dec = decode_modify_liquidity(lg)
+            if not dec or dec["liquidity_delta"] <= 0:
+                continue
+            c["liq_adds_total"] += 1
+            pid = dec["pool_id"]
+            if pid not in store.pools:
+                c["liq_adds_unknown_pool"] += 1  # ölçüm penceresinden önce açılmış havuz
+                continue
+            if pid in store.first_liq:
+                continue
+            store.add_first_liq({
+                "pool_id": pid, "ts": await rpc.block_ts(block), "block": block, "tx": tx,
+                "same_tx_as_init": tx == store.pools[pid]["tx"],
+                "tick_lower": dec["tick_lower"], "tick_upper": dec["tick_upper"],
+                "liquidity_delta": str(dec["liquidity_delta"]),
+            })
+
+
+async def poll_once(rpc: RPC, store: Store):
+    head = await rpc.block_number()
+    safe = head - CONFIRMATIONS
+    ck = store.ckpt
+    if safe < ck["next_block"]:
+        return
+    async for lo, hi, logs in iter_log_chunks(rpc, ck["next_block"], safe):
+        await process_logs(rpc, store, logs)
+        ck["next_block"] = hi + 1
+        ck["window_end_ts"] = await rpc.block_ts(hi)
+        store.save_ckpt()  # her parçadan sonra: uzun backfill yarıda kalırsa kaldığı yerden devam
+        if logs or hi - lo >= 1000:
+            log.info("blok %d→%d | %d log | toplam havuz=%d", lo, hi, len(logs), len(store.pools))
+    ck["counters"]["polls"] += 1
+    store.save_ckpt()
+
+
+# --- Özet ---
+def _pct(sorted_vals: list, p: float):
+    if not sorted_vals:
+        return None
+    return sorted_vals[min(len(sorted_vals) - 1, int(round(p * (len(sorted_vals) - 1))))]
+
+
+def _utc_hour(ts: int) -> str:
+    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:00Z")
+
+
+def compute_summary(store: Store) -> dict:
+    ck = store.ckpt or {}
+    pools = sorted(store.pools.values(), key=lambda r: (r["ts"], r["log_index"]))
+    n = len(pools)
+    w0, w1 = ck.get("window_start_ts"), ck.get("window_end_ts")
+    hours = (w1 - w0) / 3600 if (w0 and w1 and w1 > w0) else 0.0
+
+    # Saatlik dağılım (boş saatler dahil) + günün saati
+    per_hour = Counter(_utc_hour(r["ts"]) for r in pools)
+    hourly = {}
+    if hours > 0:
+        t = (w0 // 3600) * 3600
+        while t <= w1:
+            hourly[_utc_hour(t)] = per_hour.get(_utc_hour(t), 0)
+            t += 3600
+    hour_of_day = Counter(datetime.fromtimestamp(r["ts"], timezone.utc).hour for r in pools)
+
+    gaps = sorted(b["ts"] - a["ts"] for a, b in zip(pools, pools[1:]))
+
+    tokens = Counter()
+    for r in pools:
+        for cur in (r["currency0"], r["currency1"]):
+            if cur != ZERO_ADDR:
+                tokens[cur] += 1
+    launch_like = sum(
+        1 for r in pools
+        if any(cur != ZERO_ADDR and tokens[cur] == 1 for cur in (r["currency0"], r["currency1"]))
     )
 
+    liq = {}
+    if TRACK_LIQUIDITY:
+        deltas = sorted(
+            store.first_liq[p["pool_id"]]["ts"] - p["ts"]
+            for p in pools if p["pool_id"] in store.first_liq
+        )
+        within = {}
+        for T in LIQ_THRESHOLDS_SEC:
+            # Sağdan kırpma: pencere sonuna T saniyeden az kalmış havuzlar henüz değerlendirilemez
+            eligible = [p for p in pools if w1 and p["ts"] <= w1 - T]
+            hit = sum(
+                1 for p in eligible
+                if p["pool_id"] in store.first_liq
+                and store.first_liq[p["pool_id"]]["ts"] - p["ts"] <= T
+            )
+            within[str(T)] = {
+                "eligible_pools": len(eligible), "with_liquidity": hit,
+                "share": round(hit / len(eligible), 3) if eligible else None,
+            }
+        liq = {
+            "pools_with_liquidity": len(deltas),
+            "same_tx_as_init": sum(1 for p in pools if store.first_liq.get(p["pool_id"], {}).get("same_tx_as_init")),
+            "median_sec_to_first_liquidity": _pct(deltas, 0.5),
+            "p90_sec_to_first_liquidity": _pct(deltas, 0.9),
+            "added_within_sec": within,
+            "liquidity_adds_total": ck.get("counters", {}).get("liq_adds_total", 0),
+            "liquidity_adds_unknown_pool": ck.get("counters", {}).get("liq_adds_unknown_pool", 0),
+        }
 
-def heartbeat(state, start, label="HEARTBEAT"):
-    elapsed_h = (time.time() - start) / 3600
-    rate = state["total"] / elapsed_h if elapsed_h > 0 else 0
-    log.info(
-        "--- %s | %.2fh | total=%d | %.1f/saat | %.1f/gün ---",
-        label, elapsed_h, state["total"], rate, rate * 24,
-    )
-
-
-async def run_wss(start, end, state):
-    params = {"topics": [INITIALIZE_TOPIC]}
-    if POOL_MANAGER:
-        params["address"] = POOL_MANAGER
-
-    async with websockets.connect(
-        WSS, ping_interval=20, ping_timeout=20, close_timeout=10
-    ) as ws:
-        await ws.send(json.dumps({
-            "jsonrpc": "2.0", "id": 1, "method": "eth_subscribe",
-            "params": ["logs", params],
-        }))
-        resp = json.loads(await ws.recv())
-        if "error" in resp:
-            raise RuntimeError(f"Subscribe rejected: {resp['error']}")
-        sub_id = resp.get("result")
-        if not sub_id:
-            raise RuntimeError(f"Subscribe no result: {resp}")
-        log.info("WSS abone olundu: %s", sub_id)
-        state["mode"] = "wss"
-
-        last_heartbeat = start
-        async for raw in ws:
-            if time.time() >= end:
-                return
-            msg = json.loads(raw)
-            if msg.get("method") != "eth_subscription":
-                continue
-            if msg["params"]["subscription"] != sub_id:
-                continue
-            process_event(msg["params"]["result"], state)
-            if time.time() - last_heartbeat > 600:
-                heartbeat(state, start)
-                last_heartbeat = time.time()
-
-
-async def _rpc_call(client, method, params):
-    r = await client.post(RPC, json={
-        "jsonrpc": "2.0", "id": 1, "method": method, "params": params,
-    })
-    data = r.json()
-    if "error" in data:
-        raise RuntimeError(f"{method} error: {data['error']}")
-    return data["result"]
-
-
-async def run_polling(start, end, state):
-    log.info("HTTP polling modu (her %.0f saniyede bir eth_getLogs)", POLL_INTERVAL_SEC)
-    state["mode"] = "http-polling"
-
-    async with httpx.AsyncClient(timeout=30) as client:
-        try:
-            last_block = int(await _rpc_call(client, "eth_blockNumber", []), 16)
-        except Exception as e:
-            log.error("RPC bağlantısı başarısız: %s", e)
-            return
-        log.info("Başlangıç bloğu: %d", last_block)
-
-    last_heartbeat = start
-    poll_count = 0
-
-    while time.time() < end:
-        poll_count += 1
-        try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                current_block = int(await _rpc_call(client, "eth_blockNumber", []), 16)
-
-                if current_block <= last_block:
-                    log.info("poll #%d | blok değişmedi (%d)", poll_count, current_block)
-                else:
-                    params = {
-                        "fromBlock": hex(last_block + 1),
-                        "toBlock": hex(current_block),
-                        "topics": [INITIALIZE_TOPIC],
-                    }
-                    if POOL_MANAGER:
-                        params["address"] = POOL_MANAGER
-
-                    events = await _rpc_call(client, "eth_getLogs", [params])
-                    log.info(
-                        "poll #%d | blok %d→%d | %d event",
-                        poll_count, last_block + 1, current_block, len(events),
-                    )
-                    for ev in events:
-                        process_event(ev, state)
-                    last_block = current_block
-
-        except Exception as e:
-            log.warning("poll #%d hatası: %s (%s)", poll_count, e, type(e).__name__)
-
-        if time.time() - last_heartbeat > 600:
-            heartbeat(state, start)
-            last_heartbeat = time.time()
-
-        await asyncio.sleep(POLL_INTERVAL_SEC)
-
-
-def write_summary(start, state):
-    elapsed_h = (time.time() - start) / 3600
-    summary = {
+    return {
         "measured_at": datetime.now(timezone.utc).isoformat(),
-        "duration_hours": round(elapsed_h, 4),
-        "mode": state["mode"],
-        "contract_filter": POOL_MANAGER or None,
-        "total_events": state["total"],
-        "events_per_hour": round(state["total"] / elapsed_h, 2) if elapsed_h else 0,
-        "events_per_day": round(state["total"] / elapsed_h * 24, 1) if elapsed_h else 0,
-        "by_contract": dict(state["by_address"]),
-        "block_range": {
-            "min": min(state["recent_blocks"]) if state["recent_blocks"] else None,
-            "max": max(state["recent_blocks"]) if state["recent_blocks"] else None,
+        "window": {
+            "start": datetime.fromtimestamp(w0, timezone.utc).isoformat() if w0 else None,
+            "end": datetime.fromtimestamp(w1, timezone.utc).isoformat() if w1 else None,
+            "hours": round(hours, 3),
+            "blocks": [ck.get("start_block"), (ck.get("next_block") or 0) - 1],
         },
-        "wss": WSS,
-        "rpc": RPC,
-        "topic": INITIALIZE_TOPIC,
+        "contract_filter": ck.get("contract_filter"),
+        "total_initialize": n,
+        "pools_per_hour": round(n / hours, 3) if hours else None,
+        "pools_per_day": round(n / hours * 24, 2) if hours else None,
+        "extrapolation_reliable": hours >= 24,
+        "inter_arrival_sec": {
+            "median": _pct(gaps, 0.5), "p90": _pct(gaps, 0.9), "max": gaps[-1] if gaps else None,
+        },
+        "hourly": hourly,
+        "hour_of_day_utc": {str(h): hour_of_day.get(h, 0) for h in range(24)},
+        "by_contract": dict(Counter(r["contract"] for r in pools)),
+        "block_range_seen": {
+            "min": min((r["block"] for r in pools), default=None),
+            "max": max((r["block"] for r in pools), default=None),
+        },
+        "pool_shape": {
+            "with_hook": sum(1 for r in pools if r["has_hook"]),
+            "dynamic_fee": sum(1 for r in pools if r["dynamic_fee"]),
+            "native_pair": sum(1 for r in pools if r["native_pair"]),
+            "top_hooks": Counter(r["hooks"] for r in pools if r["has_hook"]).most_common(10),
+            "fees": dict(Counter(str(r["fee"]) for r in pools).most_common(10)),
+        },
+        "tokens": {
+            "distinct": len(tokens),
+            "top10_by_pool_count": tokens.most_common(10),
+            "tokens_in_single_pool": sum(1 for v in tokens.values() if v == 1),
+            # Vekil ölçü: penceredeki tek havuzu olan bir token içeren havuz. Pencere kısaysa şişer.
+            "launch_like_pools_proxy": launch_like,
+        },
+        "liquidity": liq,
+        "runtime": ck.get("counters", {}),
+        "config": {
+            "rpc": RPC_URL, "initialize_topic": INITIALIZE_TOPIC,
+            "modify_liquidity_topic": MODIFY_LIQUIDITY_TOPIC,
+            "confirmations": CONFIRMATIONS, "poll_interval_sec": POLL_INTERVAL_SEC,
+            "track_liquidity": TRACK_LIQUIDITY,
+        },
     }
-    with open(SUMMARY_FILE, "w") as f:
-        json.dump(summary, f, indent=2)
-    log.info("=" * 60)
-    log.info("ÖLÇÜM BİTTİ")
-    log.info(json.dumps(summary, indent=2))
-    log.info("=" * 60)
 
 
-async def run():
-    start = time.time()
-    end = start + DURATION_HOURS * 3600
-    state = {
-        "total": 0,
-        "by_address": defaultdict(int),
-        "recent_blocks": [],
-        "mode": "unknown",
-    }
-
+def write_summary(store: Store):
+    if not store.ckpt:
+        return
+    summary = compute_summary(store)
+    _atomic_write_json(Path(SUMMARY_FILE), summary)
     log.info("=" * 60)
-    log.info("Aşama 0 — havuz sıklığı ölçümü")
-    log.info("Kontrat:    %s", POOL_MANAGER or "(KEŞİF — filtre yok)")
-    log.info("WSS:        %s", WSS)
-    log.info("RPC:        %s", RPC)
-    log.info("Topic:      %s", INITIALIZE_TOPIC)
-    log.info("Süre:       %.2f saat", DURATION_HOURS)
+    log.info("ÖZET | pencere=%.2fsa | havuz=%d | %s/gün | güvenilir=%s",
+             summary["window"]["hours"], summary["total_initialize"],
+             summary["pools_per_day"], summary["extrapolation_reliable"])
+    liq = summary["liquidity"]
+    if liq:
+        log.info("ÖZET | likidite eklenen=%d | aynı tx=%d | medyan=%ss",
+                 liq["pools_with_liquidity"], liq["same_tx_as_init"], liq["median_sec_to_first_liquidity"])
+    log.info("Tam özet: %s", SUMMARY_FILE)
     log.info("=" * 60)
 
-    try:
+
+# --- Ana akış ---
+def _install_signals(stop: asyncio.Event):
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
         try:
-            await run_wss(start, end, state)
-            log.info("WSS akışı normal bitti")
-        except Exception as e:
-            log.warning("WSS başarısız: %s (%s)", e, type(e).__name__)
-            log.info("HTTP polling'e geçiliyor")
-            await run_polling(start, end, state)
+            loop.add_signal_handler(sig, stop.set)
+        except NotImplementedError:  # Windows
+            pass
+
+
+async def run() -> int:
+    stop = asyncio.Event()
+    _install_signals(stop)
+    store = Store(DATA_DIR)
+    rpc = RPC(RPC_URL)
+    try:
+        chain_id = int(await rpc.call("eth_chainId", []), 16)
+        if chain_id != EXPECTED_CHAIN_ID:
+            log.error("Yanlış zincir: %d (beklenen %d). RPC'yi kontrol et.", chain_id, EXPECTED_CHAIN_ID)
+            return 2
+        head = await rpc.block_number()
+
+        if store.ckpt:
+            if (store.ckpt.get("contract_filter") or "") != POOL_MANAGER:
+                log.error("POOL_MANAGER filtresi checkpoint ile uyuşmuyor. Temiz ölçüm için DATA_DIR değiştir.")
+                return 2
+            log.info("Checkpoint bulundu → blok %d'den devam (%d havuz kayıtlı)",
+                     store.ckpt["next_block"], len(store.pools))
+        else:
+            if START_BLOCK:
+                start_block = int(START_BLOCK)
+            elif BACKFILL_HOURS > 0:
+                start_block = await estimate_start_block(rpc, head, BACKFILL_HOURS)
+            else:
+                start_block = head - CONFIRMATIONS + 1
+            store.ckpt = {
+                "started_at": time.time(),
+                "start_block": start_block,
+                "next_block": start_block,
+                "window_start_ts": await rpc.block_ts(start_block),
+                "window_end_ts": await rpc.block_ts(start_block),
+                "contract_filter": POOL_MANAGER,
+                "counters": {"polls": 0, "errors": 0, "liq_adds_total": 0, "liq_adds_unknown_pool": 0},
+            }
+            store.save_ckpt()
+
+        log.info("=" * 60)
+        log.info("Aşama 0 — havuz sıklığı ölçümü")
+        log.info("Kontrat:    %s", POOL_MANAGER or "(KEŞİF — adres filtresi yok)")
+        log.info("RPC:        %s (chain %d)", RPC_URL, chain_id)
+        log.info("Başlangıç:  blok %d | head %d | geriye dönük ≈ %d blok",
+                 store.ckpt["next_block"], head, max(0, head - store.ckpt["next_block"]))
+        log.info("Likidite:   %s | confirmations=%d", "izleniyor" if TRACK_LIQUIDITY else "kapalı", CONFIRMATIONS)
+        log.info("Initialize: %s", INITIALIZE_TOPIC)
+        log.info("Süre:       %.4f saat canlı", DURATION_HOURS)
+        log.info("=" * 60)
+
+        end_at = store.ckpt["started_at"] + DURATION_HOURS * 3600
+        last_progress = time.time()
+        consecutive_errors = 0
+
+        while True:
+            try:
+                await poll_once(rpc, store)
+                consecutive_errors = 0
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                consecutive_errors += 1
+                store.ckpt["counters"]["errors"] += 1
+                log.warning("poll hatası: %s (%s) [üst üste %d]", e, type(e).__name__, consecutive_errors)
+
+            if stop.is_set() or time.time() >= end_at:
+                break
+            if time.time() - last_progress > PROGRESS_INTERVAL_SEC:
+                ck = store.ckpt
+                hrs = max((ck["window_end_ts"] - ck["window_start_ts"]) / 3600, 1e-9)
+                log.info("--- PROGRESS | pencere %.2fsa | havuz=%d | %.1f/gün | likiditeli=%d | hata=%d ---",
+                         hrs, len(store.pools), len(store.pools) / hrs * 24,
+                         len(store.first_liq), ck["counters"]["errors"])
+                last_progress = time.time()
+
+            wait = min(120.0, POLL_INTERVAL_SEC * (2 ** min(consecutive_errors, 4)))
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=wait)
+            except asyncio.TimeoutError:
+                pass
+        return 0
     finally:
-        write_summary(start, state)
+        try:
+            if store.ckpt:
+                store.save_ckpt()
+            write_summary(store)
+        finally:
+            await rpc.aclose()
 
 
 def main():
+    setup_logging()
     try:
-        asyncio.run(run())
+        sys.exit(asyncio.run(run()))
     except KeyboardInterrupt:
         log.info("Kullanıcı durdurdu")
 

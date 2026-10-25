@@ -1,4 +1,4 @@
-name: Counter Long (6h)
+name: Counter Backfill (7d)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 jobs:
   measure:
     runs-on: ubuntu-latest
-    timeout-minutes: 380
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +20,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Run 6h
+      - name: Backfill last 7 days
         env:
           POOL_MANAGER: "0x8366a39cc670b4001a1121b8f6a443a643e40951"
-          DURATION_HOURS: "6"
-          SKIP_WSS: "1"
-          POLL_INTERVAL_SEC: "20"
+          BACKFILL_HOURS: "168"
+          DURATION_HOURS: "0"
+          TRACK_LIQUIDITY: "1"
+          MAX_BLOCK_RANGE: "5000"
           ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
+          EXPECTED_CHAIN_ID: "4663"
         run: python -m collar_watch.counter
 
       - name: Show summary
@@ -35,14 +37,18 @@ jobs:
           echo "=== counter-summary.json ==="
           cat counter-summary.json || echo "(yok)"
           echo ""
-          echo "=== last 40 log lines ==="
-          tail -40 counter.log || echo "(yok)"
+          echo "=== data/ satır sayıları ==="
+          wc -l data/*.jsonl 2>/dev/null || echo "(yok)"
+          echo ""
+          echo "=== son 30 log ==="
+          tail -30 counter.log || echo "(yok)"
 
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: counter-6h
+          name: counter-backfill-7d
           path: |
             counter.log
             counter-summary.json
+            data/

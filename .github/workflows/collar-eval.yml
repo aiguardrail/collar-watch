@@ -116,6 +116,28 @@ jobs:
           CONCURRENCY: ${{ inputs.concurrency }}
         run: python -m collar_watch.collar
 
+      - name: Build UI JSON (sanity gate)
+        if: success()
+        run: python -m collar_watch.publish
+
+      - name: Publish to R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          pip install awscli
+          aws s3 cp recent.json s3://collar-data/recent.json \
+            --endpoint-url "$R2_ENDPOINT" \
+            --cache-control "public, max-age=300" \
+            --content-type "application/json"
+          aws s3 cp scorecard.json s3://collar-data/scorecard.json \
+            --endpoint-url "$R2_ENDPOINT" \
+            --cache-control "public, max-age=300" \
+            --content-type "application/json"
+          echo "✓ R2'ye yayınlandı"
+
       - name: Show result
         if: always()
         run: |
@@ -133,8 +155,15 @@ jobs:
               echo "❌ evaluations.jsonl yok"
             fi
             echo ""
+            if [ -f scorecard.json ]; then
+              echo "#### Scorecard özeti"
+              echo '```json'
+              head -40 scorecard.json
+              echo '```'
+            fi
+            echo ""
             if [ -f counter-summary.json ]; then
-              echo "<details><summary>counter-summary.json (özet)</summary>"
+              echo "<details><summary>counter-summary.json</summary>"
               echo ""
               echo '```json'
               head -30 counter-summary.json
@@ -153,6 +182,8 @@ jobs:
           path: |
             evaluations.jsonl
             sampled-pools.jsonl
+            scorecard.json
+            recent.json
             counter-summary.json
             counter.log
             data/events.jsonl

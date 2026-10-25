@@ -1,8 +1,7 @@
 """sampled-pools.jsonl'daki her havuz için Collar Guardrail MCP'sini çağırır.
 
-Kullanım:
-    python -m collar_watch.collar
-    LIMIT=3 DELAY_SEC=5 python -m collar_watch.collar    # smoke
+Tool: check_token_safety(contract_address) -> {severity, risk_factors, sell_simulation_ok}
+severity eşlemesi: safe→ALLOW, warn→WARN, danger→DENY
 """
 import asyncio
 import json
@@ -25,15 +24,11 @@ REQ_PER_MIN = float(os.getenv("REQ_PER_MIN", "22"))
 CONCURRENCY = int(os.getenv("CONCURRENCY", "5"))
 LIMIT = int(os.getenv("LIMIT", "0"))
 
-# Havuzlar arası aralık: her havuz 2 çağrı → aralıklı başlat
-POOL_INTERVAL_SEC = 2 * 60.0 / REQ_PER_MIN
+# +20% buffer (Claude'un önerisi): t3m_gap_sec sapmasını azaltır
+POOL_INTERVAL_SEC = 1.2 * 2 * 60.0 / REQ_PER_MIN
 
 OK_DECISIONS = {"ALLOW", "WARN", "DENY"}
-
-TOKEN_KEYS = {"contract_address", "token_address", "address", "token"}
-CHAIN_KEYS = {"chain", "network", "chain_id", "network_id"}
-CHAIN_INT = 4663
-CHAIN_STR = "robinhood"
+SEVERITY_MAP = {"safe": "ALLOW", "warn": "WARN", "danger": "DENY"}
 
 
 class RateLimiter:
@@ -86,39 +81,9 @@ def _extract_text(result: dict) -> str:
     return ""
 
 
-def build_args(schema: dict, token: str) -> dict:
-    props = schema.get("properties", {})
-    required = schema.get("required", [])
-    args = {}
-
-    for k, v in props.items():
-        vtype = v.get("type", "")
-        enum_vals = v.get("enum")
-
-        if k in TOKEN_KEYS:
-            args[k] = token
-        elif k in CHAIN_KEYS:
-            if enum_vals:
-                if CHAIN_INT in enum_vals:
-                    args[k] = CHAIN_INT
-                elif CHAIN_STR in enum_vals:
-                    args[k] = CHAIN_STR
-                else:
-                    raise RuntimeError(
-                        f"{k} enum'unda 4663/robinhood yok: {enum_vals}"
-                    )
-            elif vtype == "integer":
-                args[k] = CHAIN_INT
-            else:
-                args[k] = CHAIN_STR
-
-    missing = [r for r in required if r not in args]
-    if missing:
-        raise RuntimeError(
-            f"Karşılanamayan zorunlu parametreler: {missing}. "
-            f"required={required}, properties={list(props.keys())}"
-        )
-    return args
+def build_args(token: str) -> dict:
+    """check_token_safety tek parametre alır: contract_address."""
+    return {"contract_address": token}
 
 
 async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
@@ -134,8 +99,8 @@ async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
                         wait = float(r.headers.get("retry-after", 5 + 5 * attempt))
                     except (ValueError, TypeError):
                         wait = 5.0 + 5.0 * attempt
-                    print(f"  HTTP {r.status_code} → {wait:.1f}s sonra tekrar "
-                          f"({attempt + 1}/{retries})", file=sys.stderr)
+                    print(f"  HTTP {r.status_code} → {wait:.1f}s sonra tekrar",
+                          file=sys.stderr)
                     await asyncio.sleep(wait)
                     continue
             return r
@@ -143,8 +108,8 @@ async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
             last_exc = e
             if attempt < retries:
                 wait = 2.0 + attempt
-                print(f"  {type(e).__name__} → {wait:.1f}s sonra tekrar "
-                      f"({attempt + 1}/{retries})", file=sys.stderr)
+                print(f"  {type(e).__name__} → {wait:.1f}s sonra tekrar",
+                      file=sys.stderr)
                 await asyncio.sleep(wait)
                 continue
             raise
@@ -155,6 +120,7 @@ async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
 
 async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
                     ) -> tuple[dict | None, str]:
+    """tools/list -> schema dump. smoke_token verilirse gerçek tools/call dener."""
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
     await rate_limiter.acquire()
 
@@ -165,7 +131,6 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
 
     print("=== PREFLIGHT ===")
     print(f"status: {r.status_code}")
-    print(f"body[:300]: {r.text[:300]!r}")
 
     if r.status_code != 200:
         return None, f"tools/list HTTP {r.status_code}"
@@ -195,20 +160,13 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
 
     if smoke_token:
         print(f"=== SMOKE CALL token={smoke_token[:10]}... ===")
-        try:
-            args = build_args(schema, smoke_token)
-            print(f"args: {args}")
-        except RuntimeError as e:
-            print(f"SMOKE FAIL (args): {e}", file=sys.stderr)
-            return schema, str(e)
-
-        smoke = await _do_call(client, smoke_token, "", schema)
-        print(f"smoke decision: {smoke['decision']}")
-        print(f"smoke reason: {smoke['reason']}")
-        print(f"smoke symbol: {smoke.get('symbol')}")
-        print(f"smoke name:   {smoke.get('name')}")
-        print(f"smoke risk:   {smoke.get('risk')}")
-        print(f"smoke raw:    {smoke.get('raw', '')[:600]}")
+        smoke = await _do_call(client, smoke_token, "", {})
+        print(f"smoke decision:      {smoke['decision']}")
+        print(f"smoke severity:      {smoke.get('severity')}")
+        print(f"smoke risk_factors:  {smoke.get('risk_factors')}")
+        print(f"smoke sell_sim_ok:   {smoke.get('sell_simulation_ok')}")
+        print(f"smoke reason:        {smoke['reason']}")
+        print(f"smoke raw:           {smoke.get('raw', '')[:600]}")
         print("=== END SMOKE ===\n")
 
         if smoke["decision"] not in OK_DECISIONS:
@@ -220,19 +178,16 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None
 
 async def _do_call(client: httpx.AsyncClient, token: str, session_id: str,
                    schema: dict, stamp: dict | None = None) -> dict:
-    try:
-        args = build_args(schema, token)
-    except RuntimeError as e:
-        return {"decision": "ERROR", "risk": None, "reason": str(e),
-                "symbol": None, "name": None, "raw": ""}
-
     headers = _base_headers()
     if session_id:
         headers["Mcp-Session-Id"] = session_id
 
     payload = {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-        "params": {"name": "check_token_safety", "arguments": args},
+        "params": {
+            "name": "check_token_safety",
+            "arguments": build_args(token),
+        },
     }
 
     await rate_limiter.acquire()
@@ -243,51 +198,67 @@ async def _do_call(client: httpx.AsyncClient, token: str, session_id: str,
     try:
         r = await _post_with_retry(client, headers, payload)
         if r.status_code != 200 or not r.content.strip():
-            return {"decision": "ERROR", "risk": None,
-                    "reason": f"HTTP {r.status_code}: {r.text[:500]!r}",
-                    "symbol": None, "name": None, "raw": r.text}
+            return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                    "sell_simulation_ok": None,
+                    "reason": f"HTTP {r.status_code}: {r.text[:400]!r}",
+                    "raw": r.text}
         data = _parse_body(r)
     except Exception as e:
-        return {"decision": "ERROR", "risk": None,
-                "reason": f"{type(e).__name__}: {str(e)[:300]}",
-                "symbol": None, "name": None, "raw": ""}
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None,
+                "reason": f"{type(e).__name__}: {str(e)[:300]}", "raw": ""}
 
     if "error" in data:
-        return {"decision": "ERROR", "risk": None,
-                "reason": f"rpc error: {str(data['error'])[:500]}",
-                "symbol": None, "name": None, "raw": json.dumps(data)}
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None,
+                "reason": f"rpc error: {str(data['error'])[:400]}",
+                "raw": json.dumps(data)}
 
     result = data.get("result", {})
     raw_text = _extract_text(result)
 
     if result.get("isError"):
-        return {"decision": "ERROR", "risk": None,
-                "reason": f"tool isError: {raw_text[:500]}",
-                "symbol": None, "name": None, "raw": raw_text}
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None,
+                "reason": f"tool isError: {raw_text[:400]}",
+                "raw": raw_text}
 
     if not raw_text:
-        return {"decision": "ERROR", "risk": None, "reason": "empty_content",
-                "symbol": None, "name": None, "raw": ""}
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None, "reason": "empty_content", "raw": ""}
 
     try:
         inner = json.loads(raw_text)
     except json.JSONDecodeError as e:
-        return {"decision": "ERROR", "risk": None,
-                "reason": f"non-json: {e} | raw: {raw_text[:500]!r}",
-                "symbol": None, "name": None, "raw": raw_text}
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None,
+                "reason": f"non-json: {e} | raw: {raw_text[:400]!r}",
+                "raw": raw_text}
 
-    decision = (inner.get("decision") or "").upper()
-    if decision not in OK_DECISIONS:
-        return {"decision": "ERROR", "risk": None,
-                "reason": f"raw: {raw_text[:500]!r}",
-                "symbol": None, "name": None, "raw": raw_text}
+    if inner.get("error") is not None:
+        return {"decision": "ERROR", "severity": None, "risk_factors": [],
+                "sell_simulation_ok": None,
+                "reason": f"tool error: {inner.get('error')} | {inner.get('detail')}",
+                "raw": raw_text}
+
+    severity = (inner.get("severity") or "").lower()
+    decision = SEVERITY_MAP.get(severity)
+    if decision is None:
+        return {"decision": "ERROR", "severity": severity or None,
+                "risk_factors": inner.get("risk_factors", []),
+                "sell_simulation_ok": inner.get("sell_simulation_ok"),
+                "reason": f"unknown severity: {severity!r} | raw: {raw_text[:300]!r}",
+                "raw": raw_text}
+
+    risk_factors = inner.get("risk_factors", []) or []
+    reason = "; ".join(risk_factors) if risk_factors else None
 
     return {
         "decision": decision,
-        "risk": inner.get("risk"),
-        "reason": inner.get("reason") or inner.get("severity"),
-        "symbol": inner.get("symbol") or inner.get("token_symbol"),
-        "name": inner.get("name") or inner.get("token_name"),
+        "severity": severity,
+        "risk_factors": risk_factors,
+        "sell_simulation_ok": inner.get("sell_simulation_ok"),
+        "reason": reason,
         "raw": raw_text,
     }
 
@@ -318,7 +289,6 @@ async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
 async def evaluate_pool(sem: asyncio.Semaphore, client: httpx.AsyncClient,
                         session_id: str, schema: dict, pool: dict,
                         idx: int, total: int) -> dict:
-    """Semaphore sadece HTTP çağrılarının etrafında."""
     token = pool["token"]
     s0, s3 = {}, {}
 
@@ -345,8 +315,6 @@ async def evaluate_pool(sem: asyncio.Semaphore, client: httpx.AsyncClient,
         "block": pool.get("block"), "ts": pool.get("ts"),
         "age_at_t0_sec": age_at_t0_sec,
         "t3m_gap_sec": t3m_gap_sec,
-        "symbol": t0.get("symbol") or t3m.get("symbol"),
-        "name": t0.get("name") or t3m.get("name"),
         "t0": t0, "t3m": t3m, "changed": changed,
         "evaluated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -379,7 +347,7 @@ async def main():
     print(f"Collar: {COLLAR_URL}")
     print(f"Auth: {'API key ile' if COLLAR_KEY else 'authsuz'}")
     print(f"Rate limit: {REQ_PER_MIN}/dk ({60.0/REQ_PER_MIN:.1f}s/istek)")
-    print(f"Pool interval: {POOL_INTERVAL_SEC:.2f}s (staggered launch)")
+    print(f"Pool interval: {POOL_INTERVAL_SEC:.2f}s (+20% buffer)")
     print(f"Concurrency: {CONCURRENCY}, delay: {DELAY_SEC}s")
     print("=" * 60)
     if total == 0:
@@ -403,11 +371,8 @@ async def main():
         print(f"MCP session: {session_id[:20] + '...' if session_id else '(none)'}")
         print()
 
-        # STAGGERED LAUNCH — havuzları aralıklı başlat, T+0/T+3dk kuyruğa yığılmasın
-        pool_interval = 2 * 60.0 / REQ_PER_MIN
-
         async def launch(i: int, pool: dict) -> dict:
-            await asyncio.sleep(i * pool_interval)
+            await asyncio.sleep(i * POOL_INTERVAL_SEC)
             return await evaluate_pool(sem, client, session_id, schema, pool, i + 1, total)
 
         with open(OUT, "w") as f:
@@ -419,8 +384,6 @@ async def main():
                 except Exception as e:
                     print(f"Havuz hatası: {e}", file=sys.stderr)
                     continue
-                for k in ("t0", "t3m"):
-                    rec[k].pop("raw_parsed", None)
                 results.append(rec)
                 f.write(json.dumps(rec) + "\n")
                 f.flush()
@@ -431,29 +394,35 @@ async def main():
 
     t0_decisions = Counter(r["t0"]["decision"] for r in results)
     t3m_decisions = Counter(r["t3m"]["decision"] for r in results)
+    t0_severity = Counter(r["t0"].get("severity") for r in results)
     changed_count = sum(1 for r in results if r["changed"])
-    symbols_found = sum(1 for r in results if r.get("symbol"))
     fresh_pools = sum(1 for r in results if r.get("age_at_t0_sec") is not None and r["age_at_t0_sec"] < 300)
     gaps = [r["t3m_gap_sec"] for r in results if r.get("t3m_gap_sec") is not None]
     median_gap = sorted(gaps)[len(gaps)//2] if gaps else None
-    p10_gap = sorted(gaps)[len(gaps)//10] if len(gaps) >= 10 else (gaps[0] if gaps else None)
-    p90_gap = sorted(gaps)[int(len(gaps)*0.9)] if len(gaps) >= 10 else (gaps[-1] if gaps else None)
 
     print(f"\nT+0 kararlar: {dict(t0_decisions)}")
     print(f"T+3dk kararlar: {dict(t3m_decisions)}")
+    print(f"T+0 severity: {dict(t0_severity)}")
     print(f"Değişen: {changed_count} / {len(results)}")
-    print(f"Symbol bulundu: {symbols_found} / {len(results)}")
     print(f"Taze havuz (<5dk): {fresh_pools} / {len(results)}")
-    print(f"T+3dk gerçek gecikme: median={median_gap}s p10={p10_gap}s p90={p90_gap}s")
+    print(f"T+3dk gerçek gecikme (median): {median_gap}s")
     print(f"Yazıldı: {OUT}")
 
-    # --- Backfill uyarısı ---
     if fresh_pools == 0 and len(results) > 0:
         print()
-        print("!!! NOT: Tüm havuzlar eski (backfill'den). Bu run 'T+3dk' iddiasını DEĞİL,")
-        print("!!! 'aynı eski token'a 2 kez sorunca karar tutarlı mı' sorusunu ölçer.")
-        print("!!! Gerçek 'T+3dk davranışı' için canlı sample (Initialize event'i anında) gerekir.")
-        print("!!! Scorecard'da 'decision stability' olarak çerçevele, 'T+3dk' deme.")
+        print("!!! NOT: Tüm havuzlar eski (backfill'den). Bu run 'T+3dk' iddiasını")
+        print("!!! DEĞİL, 'aynı eski token'a 2 kez sorunca karar tutarlı mı'")
+        print("!!! sorusunu ölçer. Scorecard'da 'decision stability' de.")
+
+    if results:
+        all_rf = Counter()
+        for r in results:
+            for rf in (r["t0"].get("risk_factors") or []):
+                all_rf[rf[:80]] += 1
+        if all_rf:
+            print("\n=== En sık risk faktörleri (t0) ===")
+            for rf, count in all_rf.most_common(10):
+                print(f"  [{count}x] {rf}")
 
     if results:
         print("\n=== En sık 5 ERROR nedeni (t0) ===")

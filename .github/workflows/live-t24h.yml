@@ -1,0 +1,45 @@
+name: Live T24h
+
+on:
+  schedule:
+    - cron: "20 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: live-t24h
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  t24h:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run T24h
+        env:
+          COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
+        run: |
+          source .github/scripts/databranch.sh
+
+          if ! git ls-remote --exit-code --heads origin live-data >/dev/null 2>&1; then
+            echo "live-data branch'i yok, çıkıyorum."
+            exit 0
+          fi
+          setup_data_branch
+
+          export LIVE_EVENTS="$PWD/data/live-events.jsonl"
+          export T24H_EVENTS="$PWD/data/t24h-events.jsonl"
+
+          python -u -m collar_watch.t24h
+          commit_push t24h-events.jsonl

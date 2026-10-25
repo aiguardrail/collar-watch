@@ -1,23 +1,4 @@
-"""events.jsonl'dan yeni token havuzlarını seçer, quote filtreler, örnekler.
-
-Akış:
-  1. data/events.jsonl oku (counter.py üretir)
-  2. Her havuzda quote olmayan tarafı "yeni token" say
-  3. İki taraf da quote ise atla (USDG/USDG, WETH/USDG, ...)
-  4. SAMPLE_RATE ile deterministik örneklem seç (SEED)
-  5. sampled-pools.jsonl yaz
-
-Örneklem çıktısındaki her satır:
-  {pool_id, token, quote, hook, hook_addr, fee, dynamic_fee, block, ts, tx}
-
-Kullanım:
-    python -m collar_watch.sampler
-    SAMPLE_RATE=0.015 python -m collar_watch.sampler
-    SEED=42 SAMPLE_RATE=0.015 python -m collar_watch.sampler
-
-Ortam:
-    DATA_DIR (data), SAMPLE_RATE (0.01), SEED (42), SAMPLE_OUT (sampled-pools.jsonl)
-"""
+"""events.jsonl'dan yeni token havuzlarını seçer, quote filtreler, örnekler."""
 import json
 import os
 import random
@@ -26,10 +7,10 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .constants import is_quote, hook_name
+from .constants import QUOTE_ASSETS, ZERO_ADDR, is_quote, hook_name
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
-SAMPLE_RATE = float(os.getenv("SAMPLE_RATE", "0.01"))
+SAMPLE_RATE = float(os.getenv("SAMPLE_RATE", "0.03"))
 SEED = int(os.getenv("SEED", "42"))
 SAMPLE_OUT = Path(os.getenv("SAMPLE_OUT", "sampled-pools.jsonl"))
 PROGRESS_EVERY = int(os.getenv("PROGRESS_EVERY", "5000"))
@@ -42,13 +23,11 @@ def _utc(ts: int) -> str:
 def _load_events(path: Path):
     if not path.exists():
         print(f"HATA: {path} bulunamadı.", file=sys.stderr)
-        print("Önce 'python -m collar_watch.counter' çalıştır.", file=sys.stderr)
         sys.exit(1)
-    size = path.stat().st_size
-    if size == 0:
-        print(f"HATA: {path} boş (0 byte). Backfill tamamlanmamış olabilir.", file=sys.stderr)
+    if path.stat().st_size == 0:
+        print(f"HATA: {path} boş.", file=sys.stderr)
         sys.exit(1)
-    print(f"Okunuyor: {path} ({size:,} byte)")
+    print(f"Okunuyor: {path}")
     with open(path) as f:
         for line in f:
             line = line.strip()
@@ -61,49 +40,53 @@ def _load_events(path: Path):
 
 
 def pick_new_token(rec: dict) -> tuple[str, str] | None:
-    """Havuzdaki quote olmayan tarafı döndürür. (token, quote) çifti.
-
-    İki taraf da quote ise None döner.
-    İkisi de quote değilse sol tarafı "yeni" sayar (nadir durum).
-    """
+    """Quote olmayan tarafı döndürür. (token, quote) veya None."""
     c0, c1 = rec["currency0"].lower(), rec["currency1"].lower()
+
+    # Native ETH (ZERO) pair'lerini atla — hangi tarafın "yeni" olduğu belirsiz
+    if c0 == ZERO_ADDR or c1 == ZERO_ADDR:
+        return None
+
     c0_q, c1_q = is_quote(c0), is_quote(c1)
     if c0_q and c1_q:
-        return None
+        return None  # iki quote
     if c0_q:
-        return c1, c0
+        return c1, c0  # c0 quote, c1 yeni
     if c1_q:
-        return c0, c1
-    return c0, c1  # ikisi de quote değil — c0'ı "yeni" say, c1'i quote
+        return c0, c1  # c1 quote, c0 yeni
+    return c0, c1  # ikisi de quote değil, ZERO de değil
 
 
 def main():
     events_path = DATA_DIR / "events.jsonl"
-    new_pools: list[dict] = []
+    new_pools = []
+    skipped_zero = 0
     skipped_both_quote = 0
     skipped_bad = 0
     total = 0
-    ts_min: int | None = None
-    ts_max: int | None = None
+    ts_min = ts_max = None
 
     for i, rec in enumerate(_load_events(events_path), start=1):
         total = i
-        # Zorunlu alanları kontrol et
-        if not all(k in rec for k in ("pool_id", "currency0", "currency1", "hooks", "fee", "ts", "block", "tx")):
+        if not all(k in rec for k in ("pool_id", "currency0", "currency1",
+                                       "hooks", "fee", "ts", "block", "tx")):
             skipped_bad += 1
+            continue
+
+        # ZERO kontrolü ayrı sayaç
+        if rec["currency0"].lower() == ZERO_ADDR or rec["currency1"].lower() == ZERO_ADDR:
+            skipped_zero += 1
             continue
 
         picked = pick_new_token(rec)
         if picked is None:
             skipped_both_quote += 1
             continue
-        token, quote = picked
 
+        token, quote = picked
         ts = int(rec["ts"])
-        if ts_min is None or ts < ts_min:
-            ts_min = ts
-        if ts_max is None or ts > ts_max:
-            ts_max = ts
+        ts_min = ts if ts_min is None or ts < ts_min else ts_min
+        ts_max = ts if ts_max is None or ts > ts_max else ts_max
 
         new_pools.append({
             "pool_id": rec["pool_id"],
@@ -119,44 +102,35 @@ def main():
         })
 
         if i % PROGRESS_EVERY == 0:
-            print(f"  ... {i:,} event okundu | yeni token: {len(new_pools):,} | iki-quote: {skipped_both_quote:,}")
+            print(f"  ... {i:,} okundu | yeni: {len(new_pools):,} | "
+                  f"ZERO: {skipped_zero:,} | iki-quote: {skipped_both_quote:,}")
 
-    # --- Özet ---
-    print()
-    print(f"Toplam event:         {total:,}")
-    print(f"Yeni token havuzu:    {len(new_pools):,}")
-    print(f"Atlanan (iki quote):  {skipped_both_quote:,}")
-    print(f"Atlanan (bozuk):      {skipped_bad:,}")
-
+    print(f"\nToplam event:          {total:,}")
+    print(f"Yeni token havuzu:     {len(new_pools):,}")
+    print(f"Atlanan (native ETH):  {skipped_zero:,}")
+    print(f"Atlanan (iki quote):   {skipped_both_quote:,}")
+    print(f"Atlanan (bozuk):       {skipped_bad:,}")
     if ts_min and ts_max:
-        hours = (ts_max - ts_min) / 3600
-        print(f"Zaman aralığı:        {_utc(ts_min)} → {_utc(ts_max)} ({hours:.1f} saat)")
+        print(f"Zaman aralığı:         {_utc(ts_min)} → {_utc(ts_max)} "
+              f"({(ts_max-ts_min)/3600:.1f} saat)")
 
     if not new_pools:
         print("\nHATA: yeni token havuzu yok.", file=sys.stderr)
-        print("Muhtemel sebepler: quote asset listesi çok geniş, veya events.jsonl bozuk.",
-              file=sys.stderr)
         sys.exit(1)
 
     # Quote dağılımı
-    quote_counts = Counter(p["quote"] for p in new_pools)
     print("\nQuote dağılımı:")
-    for q, c in quote_counts.most_common(10):
-        sym = q[:10]
-        pct = 100 * c / len(new_pools)
-        print(f"  {sym}...: {c:,} havuz ({pct:.1f}%)")
+    for q, c in Counter(p["quote"] for p in new_pools).most_common(10):
+        sym = QUOTE_ASSETS.get(q, q[:10] + "...")
+        print(f"  {sym:20s}: {c:,} havuz ({100*c/len(new_pools):.1f}%)")
 
     # Hook dağılımı
-    hook_counts = Counter(p["hook"] for p in new_pools)
     print("\nHook dağılımı:")
-    for h, c in hook_counts.most_common(10):
-        pct = 100 * c / len(new_pools)
-        print(f"  {h:14s}: {c:,} havuz ({pct:.1f}%)")
+    for h, c in Counter(p["hook"] for p in new_pools).most_common(10):
+        print(f"  {h:15s}: {c:,} havuz ({100*c/len(new_pools):.1f}%)")
 
-    # Deterministik örneklem
     rng = random.Random(SEED)
-    n = max(1, int(round(len(new_pools) * SAMPLE_RATE)))
-    n = min(n, len(new_pools))
+    n = max(1, min(int(round(len(new_pools) * SAMPLE_RATE)), len(new_pools)))
     sample = rng.sample(new_pools, n)
     sample.sort(key=lambda r: r["ts"])
 
@@ -164,21 +138,17 @@ def main():
         for rec in sample:
             f.write(json.dumps(rec) + "\n")
 
-    print()
-    print(f"Örneklem: {n:,} havuz ({SAMPLE_RATE:.2%} × {len(new_pools):,}, seed={SEED})")
-    print(f"Yazıldı:  {SAMPLE_OUT}")
+    print(f"\nÖrneklem: {n:,} havuz ({SAMPLE_RATE:.2%} × {len(new_pools):,}, seed={SEED})")
+    print(f"Yazıldı: {SAMPLE_OUT}")
 
-    # İlk örneklem kaydını göster (validation)
     if sample:
-        print("\nİlk örneklem kaydı (format kontrolü):")
         first = sample[0]
+        print(f"\nİlk örneklem:")
         print(f"  token   = {first['token']}")
-        print(f"  quote   = {first['quote'][:10]}...")
+        print(f"  quote   = {first['quote']}")
         print(f"  hook    = {first['hook']}")
         print(f"  fee     = {first['fee']}")
-        print(f"  block   = {first['block']:,}")
         print(f"  ts      = {_utc(first['ts'])}")
-        print(f"  pool_id = {first['pool_id'][:18]}...")
 
 
 if __name__ == "__main__":

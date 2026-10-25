@@ -6,28 +6,40 @@ on:
 jobs:
   measure:
     runs-on: ubuntu-latest
-    timeout-minutes: 380  # 6h + 20 min buffer
+    timeout-minutes: 380
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: |
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
           pip install -e .
+
       - name: Run 6h
         env:
           POOL_MANAGER: "0x8366a39cc670b4001a1121b8f6a443a643e40951"
           DURATION_HOURS: "6"
           SKIP_WSS: "1"
           POLL_INTERVAL_SEC: "20"
+          ROBINHOOD_RPC: "https://rpc.mainnet.chain.robinhood.com"
         run: python -m collar_watch.counter
-      - if: always()
+
+      - name: Show summary
+        if: always()
         run: |
-          cat counter-summary.json
-          echo "---"
-          tail -30 counter.log
-      - if: always()
+          echo "=== counter-summary.json ==="
+          cat counter-summary.json || echo "(yok)"
+          echo ""
+          echo "=== last 40 log lines ==="
+          tail -40 counter.log || echo "(yok)"
+
+      - name: Upload result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: counter-6h

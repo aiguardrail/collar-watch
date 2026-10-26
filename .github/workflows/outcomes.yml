@@ -36,7 +36,7 @@ jobs:
           source .github/scripts/databranch.sh
           setup_data_branch
 
-          export BACKFILL_EVENTS="$PWD/data/events.jsonl"
+          export BACKFILL_EVENTS="$PWD/events.jsonl"
           export LIVE_EVENTS="$PWD/data/live-events.jsonl"
           export EVALUATIONS="$PWD/evaluations.jsonl"
           export OUTCOMES_OUT="$PWD/data/outcomes.json"

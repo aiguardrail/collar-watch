@@ -7,9 +7,16 @@ on:
         description: "backfill veya backfill,live"
         required: true
         default: "backfill"
+      events_path:
+        description: "Backfill events dosyası (repo köküne göre). 7 günlük dosya = daha büyük n"
+        required: true
+        default: "events.jsonl"
 
 permissions:
   contents: write
+
+env:
+  DATA_DIR: data
 
 jobs:
   outcomes:
@@ -31,15 +38,52 @@ jobs:
           QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
           HOOK_LABELS: ${{ vars.HOOK_LABELS }}
           SOURCES: ${{ inputs.sources }}
+          EVENTS_PATH: ${{ inputs.events_path }}
           RPC_RPS: "5"
         run: |
+          if [ -z "$POOL_MANAGER" ]; then
+            echo "::error::Repo variable POOL_MANAGER tanımlı değil."
+            exit 1
+          fi
+
           source .github/scripts/databranch.sh
           setup_data_branch
 
-          export BACKFILL_EVENTS="$PWD/events.jsonl"
-          export LIVE_EVENTS="$PWD/data/live-events.jsonl"
+          export BACKFILL_EVENTS="$PWD/$EVENTS_PATH"
+          export LIVE_EVENTS="$PWD/$DATA_DIR/live-events.jsonl"
           export EVALUATIONS="$PWD/evaluations.jsonl"
-          export OUTCOMES_OUT="$PWD/data/outcomes.json"
+          export OUTCOMES_OUT="$PWD/$DATA_DIR/outcomes.json"
 
-          python -u -m collar_watch.outcomes
+          rc=0
+          python -u -m collar_watch.outcomes || rc=$?
           commit_push outcomes.json
+          exit $rc
+
+      - name: Özet
+        if: always()
+        run: |
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, os
+          p = os.path.join(os.environ["DATA_DIR"], "outcomes.json")
+          if not os.path.exists(p):
+              raise SystemExit("outcomes.json yok")
+          r = json.load(open(p))
+          print("### Outcomes")
+          print(f"- overall: {r['overall']}")
+          print(f"- by_source: {r['by_source']}")
+          print(f"- exclusions: {r['exclusions']}")
+          print("#### Hook LP aktivitesi (karar buna bağlı)")
+          for h in r["hook_lp_activity"][:5]:
+              print(f"- {h['hook']}: havuz={h['pools']} ekleme={h['pools_with_add']} "
+                    f"çekilme={h['pools_with_remove']} beforeRemove={h.get('before_remove_liquidity')}")
+          print("#### Tepe likidite duyarlılığı")
+          for s in r["peak_sensitivity"]:
+              print(f"- q={s['peak_quantile']}: n={s['n']} rug={s['rug']} oran={s['rate']}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: outcomes
+          path: ${{ env.DATA_DIR }}/outcomes.json
+          if-no-files-found: warn

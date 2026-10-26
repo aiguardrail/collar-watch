@@ -141,6 +141,15 @@ def main():
     print(f"\nÖrneklem: {n:,} havuz ({SAMPLE_RATE:.2%} × {len(new_pools):,}, seed={SEED})")
     print(f"Yazıldı: {SAMPLE_OUT}")
 
+    # EKLENEN KISIM: GitHub Actions'ın beklediği sample-meta.json dosyası
+    meta_data = {
+        "total_pools_in_window": len(new_pools),
+        "evaluated": n
+    }
+    with open("sample-meta.json", "w") as f:
+        json.dump(meta_data, f)
+    print("Yazıldı: sample-meta.json")
+
     if sample:
         first = sample[0]
         print(f"\nİlk örneklem:")

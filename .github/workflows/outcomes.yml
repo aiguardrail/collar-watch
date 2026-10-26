@@ -1,0 +1,45 @@
+name: Outcomes (base rug rate)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "backfill veya backfill,live"
+        required: true
+        default: "backfill"
+
+permissions:
+  contents: write
+
+jobs:
+  outcomes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run outcomes
+        env:
+          POOL_MANAGER: ${{ vars.POOL_MANAGER }}
+          QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
+          HOOK_LABELS: ${{ vars.HOOK_LABELS }}
+          SOURCES: ${{ inputs.sources }}
+          RPC_RPS: "5"
+        run: |
+          source .github/scripts/databranch.sh
+          setup_data_branch
+
+          export BACKFILL_EVENTS="$PWD/data/events.jsonl"
+          export LIVE_EVENTS="$PWD/data/live-events.jsonl"
+          export EVALUATIONS="$PWD/evaluations.jsonl"
+          export OUTCOMES_OUT="$PWD/data/outcomes.json"
+
+          python -u -m collar_watch.outcomes
+          commit_push outcomes.json

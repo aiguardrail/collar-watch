@@ -32,7 +32,7 @@ jobs:
           POOL_MANAGER: ${{ vars.POOL_MANAGER }}
           QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
           HOOK_LABELS: ${{ vars.HOOK_LABELS }}
-          MAX_RUNTIME_SEC: "1800"
+          MAX_RUNTIME_SEC: "20400"
         run: |
           source .github/scripts/databranch.sh
           setup_data_branch

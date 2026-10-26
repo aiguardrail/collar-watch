@@ -70,7 +70,7 @@ DEFAULT_QUOTES = (
     "0x999999990237e901c537bbd768e09562be02efa5,"
     "0x0000000000000000000000000000000000000000"
 )
-QUOTES = {a.strip().lower() for a in os.getenv("QUOTE_ADDRS", DEFAULT_QUOTES).split(",") if a.strip()}
+QUOTES = {a.strip().lower() for a in (os.getenv("QUOTE_ADDRS") or DEFAULT_QUOTES).split(",") if a.strip()}
 
 HOOK_LABELS: dict[str, str] = {}
 for _pair in os.getenv("HOOK_LABELS", "").split(","):

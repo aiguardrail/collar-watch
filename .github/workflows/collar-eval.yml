@@ -12,13 +12,13 @@ on:
         required: false
         default: "0.03"
       delay_sec:
-        description: "T+3dk bekleme (saniye, 0 = hızlı test, 180 = tam 3dk)"
+        description: "T+3dk bekleme (saniye). 180 = gerçek koşu, 0 = SMOKE (R2'ye yayınlanmaz)"
         required: false
-        default: "120"
+        default: "180"
       concurrency:
         description: "Paralel havuz sayısı"
         required: false
-        default: "10"
+        default: "5"
 
 permissions:
   contents: read
@@ -38,6 +38,9 @@ jobs:
   pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      # Secret'lar step "if" içinde doğrudan okunamaz; job env üzerinden bayrak
+      HAS_R2: ${{ secrets.R2_ENDPOINT != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +75,25 @@ jobs:
           if not (0 <= d <= 600): sys.exit("delay_sec 0-600")
           if not (1 <= c <= 50): sys.exit("concurrency 1-50")
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
+          if d < 150:
+              print("::warning::delay_sec < 150: bu koşu 'T+3dk' ölçmez (SMOKE). R2'ye yayınlanmayacak.")
+          PY
+
+      # Collar erişilemiyorsa/auth bozuksa 12 dk backfill'den ÖNCE öğren
+      - name: Collar preflight (erken kontrol)
+        env:
+          COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
+        run: |
+          python - <<'PY'
+          import asyncio, sys, httpx
+          from collar_watch import collar as C
+
+          async def main():
+              async with httpx.AsyncClient(timeout=C.TIMEOUT_SEC) as client:
+                  schema, err = await C.preflight(client, None)
+                  if err:
+                      sys.exit(f"Collar preflight başarısız: {err}")
+          asyncio.run(main())
           PY
 
       - name: Backfill (48h)
@@ -93,20 +115,28 @@ jobs:
           SEED: "42"
         run: python -m collar_watch.sampler
 
-      - name: Verify sample (ZERO kontrolü)
+      # Collar aşamasına (30+ dk) girmeden önce örneklemi doğrula
+      - name: Verify sample (ZERO + meta kontrolü)
         run: |
           echo "=== satır sayısı ==="
-          wc -l sampled-pools.jsonl || true
+          wc -l sampled-pools.jsonl
           echo ""
-          echo "=== ZERO token sayısı (0 olmalı) ==="
-          zero_count=$(grep -c '"token": "0x0000000000000000000000000000000000000000"' sampled-pools.jsonl 2>/dev/null || echo "0")
-          echo "$zero_count"
-          if [ "$zero_count" -gt 0 ]; then
-            echo "⚠️  UYARI: $zero_count ZERO token var — sampler fix'i kontrol et"
-          fi
+          zero_count=$(grep -c '"token": "0x0000000000000000000000000000000000000000"' sampled-pools.jsonl || true)
+          echo "=== ZERO token sayısı (0 olmalı): $zero_count ==="
           echo ""
           echo "=== ilk 2 satır ==="
-          head -2 sampled-pools.jsonl || true
+          head -2 sampled-pools.jsonl
+          if [ "$zero_count" -gt 0 ]; then
+            echo "::error::$zero_count ZERO token var. Sampler quote/token ayrımı bozuk; Collar'a gitmeden duruyorum."
+            exit 1
+          fi
+          if [ ! -s sample-meta.json ]; then
+            echo "::error::sample-meta.json yok. sampler.py toplam havuz sayısını (payda) yazmıyor; sample_rate yanlış çıkar."
+            exit 1
+          fi
+          echo ""
+          echo "=== sample-meta.json ==="
+          cat sample-meta.json
 
       - name: Evaluate with Collar
         timeout-minutes: 60
@@ -118,13 +148,21 @@ jobs:
 
       - name: Build UI JSON (sanity gate)
         if: success()
+        env:
+          DELAY_SEC: ${{ inputs.delay_sec }}
         run: python -m collar_watch.publish
 
+      # Smoke koşusu (delay<150) ya da R2 kurulu değilse yayın atlanır:
+      # yanlışlıkla canlı scorecard.json'ı çöp veriyle ezmesin.
       - name: Publish to R2
-        if: success()
+        if: success() && env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec) >= 150
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+          AWS_DEFAULT_REGION: auto
+          # R2, yeni awscli'nin varsayılan checksum başlıklarını reddedebilir
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
           pip install awscli
@@ -137,6 +175,10 @@ jobs:
             --cache-control "public, max-age=300" \
             --content-type "application/json"
           echo "✓ R2'ye yayınlandı"
+
+      - name: Publish atlandı (bilgi)
+        if: success() && !(env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec) >= 150)
+        run: echo "::notice::R2 yayını atlandı (R2 secret yok ya da delay_sec < 150). Dosyalar artifact'ta."
 
       - name: Show result
         if: always()
@@ -172,6 +214,26 @@ jobs:
             fi
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # Yayından önce göz ucuyla bak: gerçek T+3dk gecikmesi ve hook yoğunluğu
+      - name: Gap + hook özeti
+        if: always()
+        run: |
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import collections, json, os, statistics
+          p = "evaluations.jsonl"
+          if not os.path.exists(p):
+              raise SystemExit(0)
+          rows = [json.loads(l) for l in open(p) if l.strip()]
+          gaps = [r["t3m_gap_sec"] for r in rows if r.get("t3m_gap_sec") is not None]
+          hooks = collections.Counter(str(r.get("hook")) for r in rows)
+          print("#### Gap + hook")
+          if gaps:
+              print(f"- T+3dk gap: median={statistics.median(gaps):.0f}s "
+                    f"min={min(gaps)}s max={max(gaps)}s (n={len(gaps)})")
+          for h, c in hooks.most_common(5):
+              print(f"- hook {h}: {c} ({c / len(rows):.0%})")
+          PY
+
       - name: Upload
         if: always()
         uses: actions/upload-artifact@v4
@@ -182,6 +244,7 @@ jobs:
           path: |
             evaluations.jsonl
             sampled-pools.jsonl
+            sample-meta.json
             scorecard.json
             recent.json
             counter-summary.json

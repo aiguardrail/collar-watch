@@ -12,7 +12,7 @@ on:
         required: false
         default: "0.03"
       delay_sec:
-        description: "T+3dk bekleme (saniye). 180 = gerçek koşu, 0 = SMOKE (R2'ye yayınlanmaz)"
+        description: "T+3dk bekleme (saniye). 180 = gerçek koşu, 0 = SMOKE (yayınlanmaz)"
         required: false
         default: "180"
       concurrency:
@@ -21,7 +21,7 @@ on:
         default: "5"
 
 permissions:
-  contents: read
+  contents: write   # live-data branch'ine push için gerekli
 
 concurrency:
   group: collar-eval
@@ -76,7 +76,7 @@ jobs:
           if not (1 <= c <= 50): sys.exit("concurrency 1-50")
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
           if d < 150:
-              print("::warning::delay_sec < 150: bu koşu 'T+3dk' ölçmez (SMOKE). R2'ye yayınlanmayacak.")
+              print("::warning::delay_sec < 150: bu koşu 'T+3dk' ölçmez (SMOKE). Yayınlanmayacak.")
           PY
 
       # Collar erişilemiyorsa/auth bozuksa 12 dk backfill'den ÖNCE öğren
@@ -152,6 +152,22 @@ jobs:
           DELAY_SEC: ${{ inputs.delay_sec }}
         run: python -m collar_watch.publish
 
+      # YENİ: live-data branch'ine push — scorecard.html'in okuduğu public kaynak.
+      # R2'den bağımsız çalışır, R2 secret'ı olmasa bile dosyalar yayınlanır.
+      - name: Push to live-data (public fallback)
+        if: success() && fromJSON(inputs.delay_sec) >= 150
+        env:
+          # 'data/' backfill tarafından zaten kullanılıyor; çakışmasın diye ayrı dizin
+          DATA_DIR: publish-data
+          DATA_BRANCH: live-data
+        run: |
+          source .github/scripts/databranch.sh
+          setup_data_branch
+          cp scorecard.json "$DATA_DIR/" 2>/dev/null || true
+          cp recent.json "$DATA_DIR/" 2>/dev/null || true
+          commit_push scorecard.json recent.json
+          echo "✓ live-data branch'ine push edildi"
+
       # Smoke koşusu (delay<150) ya da R2 kurulu değilse yayın atlanır:
       # yanlışlıkla canlı scorecard.json'ı çöp veriyle ezmesin.
       - name: Publish to R2
@@ -178,7 +194,7 @@ jobs:
 
       - name: Publish atlandı (bilgi)
         if: success() && !(env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec) >= 150)
-        run: echo "::notice::R2 yayını atlandı (R2 secret yok ya da delay_sec < 150). Dosyalar artifact'ta."
+        run: echo "::notice::R2 yayını atlandı (R2 secret yok ya da delay_sec < 150). live-data push yine de çalıştı."
 
       - name: Show result
         if: always()

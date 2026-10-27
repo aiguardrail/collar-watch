@@ -24,9 +24,9 @@ TEŞHİS (hook_lp_activity):
 
 Env:
   POOL_MANAGER (zorunlu), RPC_URL, SOURCES (backfill,live), LIVE_EVENTS,
-  BACKFILL_EVENTS, EVALUATIONS (opsiyonel), OUTCOMES_OUT, QUOTE_ADDRS, HOOK_LABELS,
-  LP_PULL_THRESHOLD (0.90), LP_WINDOW_SEC (86400), START_RANGE (10000),
-  MIN_RANGE (200), RPC_RPS (5), MIN_PEAK_LIQ (0), MODIFY_LIQ_TOPIC
+  BACKFILL_EVENTS, EVALUATIONS (opsiyonel), OUTCOMES_OUT, OUTCOMES_OUT_JSONL,
+  QUOTE_ADDRS, HOOK_LABELS, LP_PULL_THRESHOLD (0.90), LP_WINDOW_SEC (86400),
+  START_RANGE (10000), MIN_RANGE (200), RPC_RPS (5), MIN_PEAK_LIQ (0), MODIFY_LIQ_TOPIC
 
 Kullanım:
     POOL_MANAGER=0x... python -m collar_watch.outcomes
@@ -50,6 +50,10 @@ LIVE_EVENTS = Path(os.getenv("LIVE_EVENTS", "live-events.jsonl"))
 BACKFILL_EVENTS = Path(os.getenv("BACKFILL_EVENTS", "data/events.jsonl"))
 EVALUATIONS = Path(os.getenv("EVALUATIONS", "evaluations.jsonl"))
 OUT = Path(os.getenv("OUTCOMES_OUT", "outcomes.json"))
+
+# YENİ: publish.py'nin okuyacağı JSONL dosyası
+OUT_JSONL = Path(os.getenv("OUTCOMES_OUT_JSONL", "outcomes.jsonl"))
+
 LP_PULL_THRESHOLD = float(os.getenv("LP_PULL_THRESHOLD", "0.90"))
 LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
 START_RANGE = int(os.getenv("START_RANGE", "10000"))
@@ -466,7 +470,20 @@ async def main():
         ],
         "per_pool": per_pool,
     }
+    
+    # 1. Detaylı JSON raporunu yaz
     OUT.write_text(json.dumps(result, indent=2))
+    
+    # 2. YENİ: publish.py'nin okuyacağı JSONL formatını üret
+    with open(OUT_JSONL, "w") as f:
+        for p in per_pool:
+            f.write(json.dumps({
+                "token": p["token"],
+                "rug_24h": p["rug"],
+                "status": p["status"],
+                "max_drawdown_pct": p["max_drawdown_pct"],
+                "pool_id": p["pool_id"]
+            }) + "\n")
 
     o = result["overall"]
     print("\n=== SONUÇ ===")
@@ -476,7 +493,7 @@ async def main():
     for h in lp_activity:
         print(f"  {h['hook'][:16]:16s} havuz={h['pools']:5d} ekleme={h['pools_with_add']:5d} "
               f"çekilme={h['pools_with_remove']:5d} beforeRemoveIzni={h.get('before_remove_liquidity')}")
-    print(f"\nyazıldı: {OUT}")
+    print(f"\nyazıldı: {OUT} ve {OUT_JSONL}")
 
 
 if __name__ == "__main__":

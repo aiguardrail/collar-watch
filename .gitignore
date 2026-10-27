@@ -1,14 +1,50 @@
+# --- Environment & Secrets ---
 .env
 .env.*
 !.env.example
+
+# --- Python ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .venv/
 venv/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- Counter (Backfill) Çıktıları ---
 counter.log
 counter-summary.json
+checkpoint.json
+data/events.jsonl
+data/liquidity.jsonl
+live-events.jsonl
+
+# --- Sampler Çıktıları ---
+sampled-pools.jsonl
+sample-meta.json
+
+# --- Collar & Outcomes Çıktıları ---
+evaluations.jsonl
+outcomes.json
+outcomes.jsonl
+
+# --- Publish (UI) Çıktıları ---
+scorecard.json
+recent.json
+
+# --- Git Worktree (live-data branch'i için) ---
+# publish-data/ ve data/ klasörleri worktree olarak açılır, asla commit'lenmemeli
+publish-data/
+data/
+
+# --- OS & Loglar ---
 *.pid
 *.log
 .DS_Store
+Thumbs.db

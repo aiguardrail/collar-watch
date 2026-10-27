@@ -30,6 +30,19 @@ POOL_INTERVAL_SEC = 1.2 * 2 * 60.0 / REQ_PER_MIN
 OK_DECISIONS = {"ALLOW", "WARN", "DENY"}
 SEVERITY_MAP = {"safe": "ALLOW", "warn": "WARN", "danger": "DENY"}
 
+# --- GLOBAL BACKOFF MEKANİZMASI ---
+_global_backoff_until = 0.0
+
+async def _wait_for_global_backoff():
+    """Eğer başka bir istek 429 yediyse, herkesin beklemesini sağlar."""
+    global _global_backoff_until
+    while True:
+        now = time.monotonic()
+        if now >= _global_backoff_until:
+            break
+        await asyncio.sleep(_global_backoff_until - now)
+# ----------------------------------
+
 
 class RateLimiter:
     def __init__(self, per_minute: float):
@@ -87,27 +100,37 @@ def build_args(token: str) -> dict:
 
 
 async def _post_with_retry(client: httpx.AsyncClient, headers: dict,
-                           payload: dict, retries: int = 2) -> httpx.Response:
+                           payload: dict, retries: int = 4) -> httpx.Response: # Retry 2'den 4'e çıkarıldı
+    global _global_backoff_until
     last_exc = None
     for attempt in range(retries + 1):
+        await _wait_for_global_backoff() # Her denemeden önce global bekleme var mı kontrol et
+        
         try:
             r = await client.post(COLLAR_URL, headers=headers, json=payload,
                                   follow_redirects=True)
+            
             if r.status_code == 429 or r.status_code >= 500:
                 if attempt < retries:
                     try:
-                        wait = float(r.headers.get("retry-after", 5 + 5 * attempt))
+                        # Sunucunun Retry-After header'ına saygı duy, yoksa üstel bekle
+                        wait = float(r.headers.get("retry-after", 15 + 15 * attempt))
                     except (ValueError, TypeError):
-                        wait = 5.0 + 5.0 * attempt
-                    print(f"  HTTP {r.status_code} → {wait:.1f}s sonra tekrar",
+                        wait = 15.0 + 15.0 * attempt
+                    
+                    print(f"  HTTP {r.status_code} → Global {wait:.1f}s backoff başlatılıyor",
                           file=sys.stderr)
-                    await asyncio.sleep(wait)
+                    
+                    # Tüm eşzamanlı görevleri durdurmak için global süreyi güncelle
+                    _global_backoff_until = max(_global_backoff_until, time.monotonic() + wait)
+                    await _wait_for_global_backoff()
                     continue
             return r
+            
         except (httpx.TimeoutException, httpx.TransportError) as e:
             last_exc = e
             if attempt < retries:
-                wait = 2.0 + attempt
+                wait = 5.0 + 5.0 * attempt
                 print(f"  {type(e).__name__} → {wait:.1f}s sonra tekrar",
                       file=sys.stderr)
                 await asyncio.sleep(wait)

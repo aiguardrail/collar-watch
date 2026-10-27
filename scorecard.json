@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "rules_version": "v0",
+  "generated_at": "2026-10-27T05:50:47.979895+00:00",
+  "window_hours": 48,
+  "metric_type": "decision_stability",
+  "sample": {
+    "evaluated": 119,
+    "n_complete": 119,
+    "total_pools_in_window": 139,
+    "sample_rate": 0.8561
+  },
+  "t0": {
+    "counts": {
+      "ALLOW": 117,
+      "WARN": 2,
+      "DENY": 0,
+      "ERROR": 0,
+      "UNKNOWN": 0
+    }
+  },
+  "t3m": {
+    "counts": {
+      "ALLOW": 117,
+      "WARN": 2,
+      "DENY": 0,
+      "ERROR": 0,
+      "UNKNOWN": 0
+    }
+  },
+  "transitions": {
+    "ALLOW\u2192ALLOW": 117,
+    "WARN\u2192WARN": 2
+  },
+  "changes": {
+    "total_changed": 0,
+    "change_rate": 0.0
+  },
+  "flip": {
+    "allow_t0_count": 117,
+    "allow_t3m_count": 117,
+    "flipped_out": 0,
+    "flipped_in": 0,
+    "flip_rate": 0.0,
+    "flip_rate_ci95": [
+      0.0,
+      0.0318
+    ]
+  },
+  "deny_breakdown": {
+    "total_deny": 0,
+    "rule_based": 0,
+    "risk_flag": 0,
+    "other": 0
+  },
+  "hook_distribution": [
+    {
+      "hook": "pons_v2",
+      "n": 49
+    },
+    {
+      "hook": "none",
+      "n": 42
+    },
+    {
+      "hook": "unknown_3",
+      "n": 18
+    },
+    {
+      "hook": "unknown",
+      "n": 5
+    },
+    {
+      "hook": "unknown_4",
+      "n": 4
+    },
+    {
+      "hook": "unknown_10",
+      "n": 1
+    }
+  ],
+  "risk_factors": [
+    {
+      "factor": "Ownership not renounced (owner: 0xeb7C0347...)",
+      "n": 44
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown",
+      "n": 1
+    },
+    {
+      "factor": "may be a false positive): ('0xf4d678b8'",
+      "n": 1
+    },
+    {
+      "factor": "'0xf4d678b8')",
+      "n": 1
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0x66968bAD...)",
+      "n": 1
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0xFd1083CD...)",
+      "n": 1
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0xBB6A3E2a...)",
+      "n": 1
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0x76cc7228...)",
+      "n": 1
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0x1C083F2f...); Owner can call risky functions",
+      "n": 1
+    },
+    {
+      "factor": "but combination is not strong enough for auto-deny",
+      "n": 1
+    }
+  ],
+  "notes": {
+    "metric_type": "decision_stability",
+    "accuracy_disclaimer": "This measures T+0 vs T+3m decision consistency, not predictive accuracy. T+24h outcome data (did the token actually rug?) will be published separately.",
+    "conflict_disclosure": "This bot does not hold or trade any token. Scoring is independent of token ownership. Collar Guardrail has no token."
+  }
+}

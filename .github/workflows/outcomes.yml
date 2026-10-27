@@ -11,6 +11,9 @@ on:
         description: "Backfill events dosyası (repo köküne göre). 7 günlük dosya = daha büyük n"
         required: true
         default: "events.jsonl"
+  schedule:
+    # 6 saatte bir — Live Sampler'dan (7 */6 * * *) 16 dk sonra, rate limit çakışmasın
+    - cron: "23 */6 * * *"
 
 permissions:
   contents: write
@@ -21,7 +24,7 @@ env:
 jobs:
   outcomes:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -37,12 +40,12 @@ jobs:
           POOL_MANAGER: ${{ vars.POOL_MANAGER }}
           QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
           HOOK_LABELS: ${{ vars.HOOK_LABELS }}
-          SOURCES: ${{ inputs.sources }}
-          EVENTS_PATH: ${{ inputs.events_path }}
-          RPC_RPS: "1"                    # ← 5 → 1
-          START_RANGE: "10000"            # aynı
+          SOURCES: ${{ inputs.sources || 'backfill' }}
+          EVENTS_PATH: ${{ inputs.events_path || 'events.jsonl' }}
+          RPC_RPS: "1"
+          START_RANGE: "10000"
           MIN_RANGE: "500"
-          LOOKBACK_HOURS: "72"            # ← 168 → 72 (yarıya indir = yarı çağrı)
+          LOOKBACK_HOURS: "72"
         run: |
           if [ -z "$POOL_MANAGER" ]; then
             echo "::error::Repo variable POOL_MANAGER tanımlı değil."
@@ -56,37 +59,58 @@ jobs:
           export LIVE_EVENTS="$PWD/$DATA_DIR/live-events.jsonl"
           export EVALUATIONS="$PWD/evaluations.jsonl"
           export OUTCOMES_OUT="$PWD/$DATA_DIR/outcomes.json"
+          export OUTCOMES_OUT_JSONL="$PWD/$DATA_DIR/outcomes.jsonl"
 
           rc=0
           python -u -m collar_watch.outcomes || rc=$?
-          commit_push outcomes.json
+          commit_push outcomes.json outcomes.jsonl
           exit $rc
 
       - name: Özet
         if: always()
         run: |
           python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import json, os
-          p = os.path.join(os.environ["DATA_DIR"], "outcomes.json")
-          if not os.path.exists(p):
+          import json, os, pathlib
+          p = pathlib.Path(os.environ["DATA_DIR"]) / "outcomes.json"
+          if not p.exists():
               raise SystemExit("outcomes.json yok")
           r = json.load(open(p))
+
+          # v0.7 şeması — by_source/exclusions/hook_lp_activity/peak_sensitivity YOK
           print("### Outcomes")
-          print(f"- overall: {r['overall']}")
-          print(f"- by_source: {r['by_source']}")
-          print(f"- exclusions: {r['exclusions']}")
-          print("#### Hook LP aktivitesi (karar buna bağlı)")
-          for h in r["hook_lp_activity"][:5]:
-              print(f"- {h['hook']}: havuz={h['pools']} ekleme={h['pools_with_add']} "
-                    f"çekilme={h['pools_with_remove']} beforeRemove={h.get('before_remove_liquidity')}")
-          print("#### Tepe likidite duyarlılığı")
-          for s in r["peak_sensitivity"]:
-              print(f"- q={s['peak_quantile']}: n={s['n']} rug={s['rug']} oran={s['rate']}")
+          print(f"- schema: {r.get('schema')}")
+          print(f"- rules_version: {r.get('rules_version')}")
+          print(f"- generated_at: {r.get('generated_at')}")
+          print(f"- lookback_hours: {r.get('lookback_hours')}")
+          print()
+
+          o = r.get("overall") or {}
+          print("#### Verdicts (verdict sayısı, benzersiz token değil)")
+          print(f"- verdicts={o.get('n')}, rug={o.get('rug')}, rate={o.get('rate')}, ci95={o.get('ci95')}")
+          ou = r.get("overall_unique") or {}
+          if ou:
+              print(f"- unique_tokens={ou.get('n')}, unique_rug={ou.get('rug')}, rate={ou.get('rate')}")
+          print()
+
+          t = r.get("trusted_tokens") or {}
+          d = r.get("dead_pools") or {}
+          print("#### Trusted / Dead")
+          print(f"- trusted: {t.get('n')}/{t.get('total')}")
+          print(f"- dead_pools: {d.get('n')}/{d.get('total')}")
+          print()
+
+          a = r.get("anomalies_summary") or {}
+          if a:
+              print("#### Anomalies")
+              for k, v in a.items():
+                  print(f"- {k}: {v}")
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: outcomes
-          path: ${{ env.DATA_DIR }}/outcomes.json
+          path: |
+            ${{ env.DATA_DIR }}/outcomes.json
+            ${{ env.DATA_DIR }}/outcomes.jsonl
           if-no-files-found: warn

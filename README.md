@@ -5,42 +5,42 @@
 > *"How many ALLOWs rugged? How many DENYs were junk? With base rates, not vibes."*
 
 ## 🚀 Current Stage: Autonomous Forensics (v0.4)
-Sistem tamamen otonomdur. Her gün kendi kendine çalışır, yeni havuzları bulur, Collar Guardrail'e danışır, 24 saat sonra zincire dönüp tokenların kaderini (Rug mı, Pump & Dump mı, Güvenilir mi) bağımsız olarak ölçer ve sonuçları web sitesine yayınlar.
+The system is fully autonomous. It runs daily, discovers new pools, consults Collar Guardrail, independently measures the tokens' fate 24 hours later (Rug, Pump & Dump, or Trusted), and publishes the results to the live website.
 
-## 🛠️ Ne yapıyor? (The Pipeline)
+## 🛠️ How it works (The Pipeline)
 
-1. **`counter.py`** — Robinhood Chain'de son 48 saat içindeki Uniswap V4 `Initialize` olaylarını (yeni havuzları) `eth_getLogs` ile tarar. Çökerse kaldığı yerden devam eder.
-2. **`sampler.py`** — USDG (Robinhood Chain ana paritesi) ve diğer quote asset'leri filtreler. Deterministik bir örneklem (ör. %3) seçer. Aynı token birden fazla havuzdaysa **tekilleştirir (dedupe)**.
-3. **`collar.py`** — Seçilen tokenları Collar Guardrail MCP (`check_token_safety`) üzerinden değerlendirir. 
-   *   **API Dostu:** Dakikada 8 istek (Rate Limit) ve sıralı geçiş (Concurrency: 1) kullanır.
-   *   **Dirençli:** HTTP 429 (Rate Limit) veya 500 hatalarında pes etmez, "Exponential Backoff" ile bekleyip tekrar dener. JSON içindeki gizli 429'ları bile yakalar.
-4. **`outcomes.py` (The Detective)** — Collar'dan tamamen bağımsız olarak, 24 saat sonraki on-chain durumu analiz eder:
-   *   **LP Pull:** Likidite tepe noktasından %90+ düştü mü?
-   *   **Price Crash:** Fiyat tepe noktasından %95+ düştü mü? (Pons gibi kilitli likidite platformlarındaki Pump & Dump'ları yakalar).
-   *   **Honeypot:** İşlem var ama hiç satış yok mu? (Bal kapanı).
-   *   **Bot/Sybil:** Aynı blokta 5+ cüzdandan senkronize satış var mı? İşlemler tamamen aynı ham miktarlarla mı yapılıyor?
-   *   **Flipping:** Alanların %50'si anında satıp fiyatı mı manipüle ediyor?
-   *   **Trusted:** Hiçbir anomali yoksa ve fiyat çökmediyse `is_trusted: true` damgası basar.
-5. **`publish.py`** — Tüm bu analizleri UI'ın (HTML) okuyabileceği `scorecard.json`, `recent.json` ve `outcomes.json` formatlarına dönüştürür.
+1. **`counter.py`** — Scans Uniswap V4 `Initialize` events (new pools) on Robinhood Chain over the last 48 hours using `eth_getLogs`. It is resilient and resumes from the last checkpoint if interrupted.
+2. **`sampler.py`** — Filters for USDG (the primary quote asset on Robinhood Chain) and other quote assets. Selects a deterministic sample (e.g., 3%). It **deduplicates** tokens if the same token appears in multiple pools.
+3. **`collar.py`** — Evaluates the sampled tokens via the Collar Guardrail MCP (`check_token_safety`). 
+   *   **API-Friendly:** Uses 8 requests per minute (Rate Limit) and sequential execution (Concurrency: 1).
+   *   **Resilient:** Doesn't give up on HTTP 429 (Rate Limit) or 500 errors. Uses "Exponential Backoff" to wait and retry. It even catches hidden 429s embedded within the JSON response.
+4. **`outcomes.py` (The Detective)** — Completely independent of Collar, it analyzes the on-chain state 24 hours later:
+   *   **LP Pull:** Did liquidity drop by >90% from its peak?
+   *   **Price Crash:** Did the price drop by >95% from its peak? (Catches Pump & Dumps even on locked-liquidity platforms like Pons).
+   *   **Honeypot:** Are there transactions but absolutely zero sells? (Bal trap).
+   *   **Bot/Sybil Activity:** Are there synchronized dumps from 5+ wallets in the same block? Are transactions using the exact same raw amounts?
+   *   **Flipping Network:** Are >50% of buyers immediately selling to manipulate the price?
+   *   **Trusted:** If there are no anomalies and the price hasn't crashed, it gets stamped as `is_trusted: true`.
+5. **`publish.py`** — Transforms all this data into `scorecard.json`, `recent.json`, and `outcomes.json` formats for the UI (HTML) to consume.
 
-## ⚙️ Otomasyon (GitHub Actions)
-Sistem iki ana workflow ile çalışır:
-*   **`collar-eval.yml`**: Her gün New York saatiyle 03:00'te (cron) çalışır. Geçmiş verileri `live-data` branch'inden çeker (24 saatlik analiz için), yeni tarama yapar ve sonuçları tekrar `live-data`'ya pushlar.
-*   **`counter-backfill.yml`**: Manuel tetiklenir. İstediğinde 7 günlük (168 saat) devasa bir geçmiş tarama yapıp ham veriyi (artifact olarak) indirmeni sağlar.
+## ⚙️ Automation (GitHub Actions)
+The system runs on two main workflows:
+*   **`collar-eval.yml`**: Runs daily at 03:00 AM New York time (cron). It fetches historical data from the `live-data` branch (for 24h outcome analysis), performs a new scan, and pushes the results back to `live-data`.
+*   **`counter-backfill.yml`**: Manually triggered. Allows you to perform a massive 7-day (168 hours) historical scan and download the raw data as artifacts.
 
-## 📂 Repo Yapısı
+## 📂 Repo Structure
 ```text
 .
 ├── .github/
-│   ├── scripts/databranch.sh      # live-data branch'ini izole yönetir
+│   ├── scripts/databranch.sh      # Isolated management of the live-data branch
 │   └── workflows/
-│       ├── collar-eval.yml        # Günlük otonom pipeline (Cron)
-│       └── counter-backfill.yml   # Manuel derin geçmiş tarama
+│       ├── collar-eval.yml        # Daily autonomous pipeline (Cron)
+│       └── counter-backfill.yml   # Manual deep historical scan
 ├── src/collar_watch/
-│   ├── collar.py                  # Collar API entegrasyonu (Rate-limit korumalı)
-│   ├── counter.py                 # Blok tarayıcı (Backfill)
-│   ├── outcomes.py                # 24h Rug & Anomali Dedektörü
-│   ├── publish.py                 # UI JSON üretici
-│   └── sampler.py                 # Örneklem ve tekilleştirme
+│   ├── collar.py                  # Collar API integration (Rate-limit protected)
+│   ├── counter.py                 # Block scanner (Backfill)
+│   ├── outcomes.py                # 24h Rug & Anomaly detector
+│   ├── publish.py                 # UI JSON generator
+│   └── sampler.py                 # Sampling and deduplication
 ├── pyproject.toml
 └── README.md

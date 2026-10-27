@@ -21,8 +21,8 @@ on:
         default: "1"
 
   schedule:
-    # HER GÜN UTC 00:00'da çalış (Türkiye saatiyle sabah 03:00)
-    - cron: '0 0 * * *' 
+    # HER GÜN UTC 00:00'da çalış (saatiyle sabah 03:00)
+    - cron: '0 8 * * *' 
 
 permissions:
   contents: write

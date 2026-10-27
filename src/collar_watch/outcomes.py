@@ -1,4 +1,4 @@
-"""outcomes.py - v0.7.1 (Cumulative + Fixed Rolling Window + Trusted/Dead Fix + Rate-limit hardening)"""
+"""outcomes.py - v0.7.2 (Cumulative + Fixed Rolling Window + Trusted/Dead Fix + per_pool for dashboard)"""
 import asyncio
 import json
 import math
@@ -29,7 +29,6 @@ LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))
 START_RANGE = int(os.getenv("START_RANGE", "2000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
 RPC_RPS = float(os.getenv("RPC_RPS", "3"))
-# YENİ: 429 fırtınasında nefes alma
 COOLDOWN_EVERY = int(os.getenv("COOLDOWN_EVERY", "50"))
 COOLDOWN_SEC = float(os.getenv("COOLDOWN_SEC", "20"))
 
@@ -63,7 +62,6 @@ async def _throttle():
     if wait > 0: await asyncio.sleep(wait)
 
 async def rpc(client, method, params, retries=20):
-    """FIX: retries 10→20, max bekleme 30s→120s. Public RPC rate limit'lerine dayanıklı."""
     last = None
     for a in range(retries):
         try:
@@ -182,7 +180,6 @@ async def scan_chain(client, from_block, to_block):
     liq_series = defaultdict(list)
     swap_series = defaultdict(list)
     size, cap, frm, ok_streak, calls = START_RANGE, START_RANGE, from_block, 0, 0
-    t0 = time.time()
     total_blocks = max(1, to_block - from_block + 1)
     while frm <= to_block:
         to = min(frm + size - 1, to_block)
@@ -196,9 +193,8 @@ async def scan_chain(client, from_block, to_block):
             cap, ok_streak = size, 0
             continue
         calls += 1
-        # YENİ: her COOLDOWN_EVERY çağrıda RPC'ye nefes aldır
         if COOLDOWN_EVERY > 0 and calls % COOLDOWN_EVERY == 0:
-            print(f"  cooldown {COOLDOWN_SEC:.0f}s ({calls} çağrı) — RPC nefes alsın...", flush=True)
+            print(f"  cooldown {COOLDOWN_SEC:.0f}s ({calls} çağrı)...", flush=True)
             await asyncio.sleep(COOLDOWN_SEC)
         for lg in logs:
             t0t = lg["topics"][0].lower()
@@ -359,9 +355,7 @@ async def main():
 
     new_per_pool = []
     if to_scan:
-        # FIX 1: min() — eski havuzların oluşum bloğundan başla
         min_scan_block = min(head - lookback_blocks, min(p["block"] for p in to_scan))
-        # FIX 2 (YENİ): to_block'u daralt — en son "24h penceresi biten havuz"un ötesini taramaya gerek yok
         max_relevant = max(p["block"] + window_blocks for p in to_scan)
         to_block = min(head, max_relevant)
         print(f"Tarama aralığı: {min_scan_block} -> {to_block} "
@@ -396,6 +390,7 @@ async def main():
                 "price_drop_pct": a["max_price_dd_pct"],
                 "pool_id": pid,
                 "hook_addr": p.get("hook_addr"),
+                "hook": p.get("hook"),
             })
 
     all_outcomes = dict(reused)
@@ -426,7 +421,6 @@ async def main():
         "pools_without_any_swap": sum(1 for r in inc if r.get("swap_count", 0) == 0),
     }
 
-    # Hook bazında özet — Guardrail tier-3 advisory için
     by_hook = defaultdict(lambda: {"n": 0, "rug": 0})
     for r in inc:
         h = (r.get("hook_addr") or "none").lower()
@@ -436,7 +430,7 @@ async def main():
 
     result = {
         "schema": 6,
-        "rules_version": "v0.7.1-fixed",
+        "rules_version": "v0.7.2-fixed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": LOOKBACK_HOURS,
         "overall": rate_block(total_rug, len(inc)),
@@ -451,6 +445,7 @@ async def main():
                 "rug_rate": round(v["rug"]/v["n"], 4) if v["n"] else None}
             for h, v in by_hook.items()
         },
+        "per_pool": final_list,
     }
 
     OUT.write_text(json.dumps(result, indent=2))

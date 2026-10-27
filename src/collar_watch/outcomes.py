@@ -1,4 +1,4 @@
-"""outcomes.py - v0.6 (Cumulative + Fixed Rolling Window)"""
+"""outcomes.py - v0.7 (Cumulative + Fixed Rolling Window + Trusted/Dead Fix)"""
 import asyncio
 import json
 import math
@@ -25,10 +25,10 @@ OUT_JSONL = Path(os.getenv("OUTCOMES_OUT_JSONL", "outcomes.jsonl"))
 LP_PULL_THRESHOLD = float(os.getenv("LP_PULL_THRESHOLD", "0.90"))
 PRICE_CRASH_THRESHOLD = float(os.getenv("PRICE_CRASH_THRESHOLD", "0.95"))
 LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
-LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))  # İlk çalıştırma için 24 saat yeterli
-START_RANGE = int(os.getenv("START_RANGE", "2000"))       # Küçültüldü (10000 -> 2000)
-MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))            # Küçültüldü (500 -> 200)
-RPC_RPS = float(os.getenv("RPC_RPS", "3"))                 # 2 -> 3 (biraz hızlı)
+LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))
+START_RANGE = int(os.getenv("START_RANGE", "2000"))
+MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
+RPC_RPS = float(os.getenv("RPC_RPS", "3"))
 
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
 SWAP_TOPIC = "0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f"
@@ -66,7 +66,7 @@ async def rpc(client, method, params, retries=10):
                 try: wait = float(r.headers.get("retry-after", 0))
                 except: wait = 0
                 if wait <= 0: wait = (2 ** a) + random.uniform(0, 1)
-                wait = min(wait, 30)  # Max 30 saniye (60 yerine)
+                wait = min(wait, 30)
                 print(f"  RPC {method} HTTP {r.status_code} → {wait:.1f}s (deneme {a+1}/{retries})", file=sys.stderr)
                 await asyncio.sleep(wait)
                 continue
@@ -206,7 +206,14 @@ async def scan_chain(client, from_block, to_block):
             print(f"  tarama %{pct:.0f} | çağrı={calls} | aralık={size}", flush=True)
     for pid in liq_series: liq_series[pid].sort(key=lambda x: x[0])
     for pid in swap_series: swap_series[pid].sort(key=lambda x: x[0])
-    print(f"tarama bitti: {calls} çağrı, likidite={len(liq_series)}, swap={len(swap_series)}")
+    total_liq = sum(len(v) for v in liq_series.values())
+    total_swaps = sum(len(v) for v in swap_series.values())
+    print(f"tarama bitti: {calls} çağrı, likidite={total_liq} ({len(liq_series)} havuz), "
+          f"swap={total_swaps} ({len(swap_series)} havuz)")
+    # Sanity: likidite var ama tek swap yok → SWAP_TOPIC yanlış olabilir
+    if total_liq > 0 and total_swaps == 0:
+        print(f"UYARI: likidite var ama tek swap logu yok. SWAP_TOPIC yanlış olabilir ({SWAP_TOPIC}).",
+              file=sys.stderr)
     return liq_series, swap_series
 
 async def blocks_per_sec(client, from_block, head):
@@ -229,7 +236,7 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
         elif delta < 0: n_rem += 1
         if cum > peak_liq: peak_liq = cum
         elif peak_liq > 0: max_dd_liq = max(max_dd_liq, min(1.0, 1.0 - cum / peak_liq))
-    
+
     swap_count = buy_count = sell_count = 0
     unique_traders, buyer_wallets, seller_wallets = set(), set(), set()
     peak_price = 0.0
@@ -237,7 +244,7 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
     early_snipers = 0
     sells_by_block = Counter()
     trade_amounts = Counter()
-    
+
     for blk, sender, amt0, amt1, sqrt_price in swap_events:
         if blk < init_block: continue
         if blk > end: break
@@ -272,10 +279,11 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
         if count / swap_count > 0.40: is_bot_activity = True
     flippers = buyer_wallets.intersection(seller_wallets)
     is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
-    is_trusted = (not price_crash and max_dd_liq < LP_PULL_THRESHOLD and 
-                  not is_honeypot and not is_wash_trade and not is_synchronized_dump and 
+    # FIX: swap_count > 0 zorunlu — ölü havuz "trusted" görünmesin
+    is_trusted = (swap_count > 0 and not price_crash and max_dd_liq < LP_PULL_THRESHOLD and
+                  not is_honeypot and not is_wash_trade and not is_synchronized_dump and
                   not is_bot_activity and not is_flipping_network and early_snipers <= 3)
-    
+
     return {
         "peak_liq": peak_liq, "max_drawdown_liq": max_dd_liq, "n_add": n_add, "n_remove": n_rem,
         "swap_count": swap_count, "buy_count": buy_count, "sell_count": sell_count,
@@ -305,53 +313,50 @@ async def main():
     pools = load_pools()
     if not pools: print("Havuz yok, çıkıyorum."); return
     attach_collar_sell_sim(pools)
-    
+
     prev_outcomes = load_previous_outcomes()
     print(f"Önceki outcomes: {len(prev_outcomes)} token")
-    
+
     async with httpx.AsyncClient(timeout=30) as client:
         head = int(await rpc(client, "eth_blockNumber", []), 16)
         from_block_all = min(p["block"] for p in pools)
         bps = await blocks_per_sec(client, from_block_all, head)
         window_blocks = int(LP_WINDOW_SEC * bps)
         lookback_blocks = int(LOOKBACK_HOURS * 3600 * bps)
-    
-    # is_old: 24 saatlik penceresi dolmuş mu?
+
     current_tokens = {p["token"].lower(): p for p in pools}
     reused = {}
     to_scan = []
-    
+
     for p in pools:
         tk = p["token"].lower()
         prev_out = prev_outcomes.get(tk)
-        is_old = p["block"] + window_blocks <= head  # Pencere dolmuş mu?
+        is_old = p["block"] + window_blocks <= head
         has_good_prev = prev_out and prev_out.get("swap_count", 0) > 0
-        
+
         if is_old and has_good_prev:
             reused[tk] = prev_out
-        elif is_old:  # Eski ama prev yok, taranmalı
+        elif is_old:
             to_scan.append(p)
-        # else: yeni, taranacak (pencere dolmamış)
         else:
             to_scan.append(p)
-    
-    # Keep old outcomes for tokens NOT in current events (cumulative)
+
     for tk, prev_out in prev_outcomes.items():
         if tk not in current_tokens:
             reused[tk] = prev_out
-    
+
     print(f"Reused: {len(reused)} | To scan: {len(to_scan)} | Lookback: {LOOKBACK_HOURS}h")
-    
+
     new_per_pool = []
     if to_scan:
-        # ÖNEMLİ: from_block = max(head - lookback_blocks, min_scan_block)
-        min_scan_block = max(head - lookback_blocks, min(p["block"] for p in to_scan))
-        to_block = head  # Pencere dolmamış havuzlar zaten immature olacak
+        # FIX: min() — eski havuzların oluşum bloğundan başla, lookback'te takılma
+        min_scan_block = min(head - lookback_blocks, min(p["block"] for p in to_scan))
+        to_block = head
         print(f"Tarama aralığı: {min_scan_block} -> {to_block} ({to_block - min_scan_block} blok)")
-        
+
         async with httpx.AsyncClient(timeout=30) as client:
             liq_series, swap_series = await scan_chain(client, min_scan_block, to_block)
-        
+
         for p in to_scan:
             pid = p["pool_id"]
             a = analyze_pool(liq_series.get(pid, []), swap_series.get(pid, []),
@@ -360,12 +365,12 @@ async def main():
             if not mature: status = "immature"
             elif a["n_add"] == 0: status = "no_liquidity_events"
             else: status = "included"
-            
+
             is_lp_pull = status == "included" and a["max_drawdown_liq"] >= LP_PULL_THRESHOLD
             is_price_crash = status == "included" and a["price_crash"]
             is_dead_pool = status == "included" and a["swap_count"] == 0
             rug = is_lp_pull or is_price_crash
-            
+
             new_per_pool.append({
                 "token": p["token"], "rug_24h": rug, "status": status,
                 "is_lp_pull": is_lp_pull, "is_price_crash": is_price_crash,
@@ -377,24 +382,29 @@ async def main():
                 "max_drawdown_pct": round(a["max_drawdown_liq"] * 100, 1),
                 "price_drop_pct": a["max_price_dd_pct"],
                 "pool_id": pid,
-                "hook_addr": p.get("hook_addr"),  # Gerçek hook adresi eklendi
+                "hook_addr": p.get("hook_addr"),
             })
-    
+
     all_outcomes = dict(reused)
     for r in new_per_pool:
         all_outcomes[r["token"].lower()] = r
-    
+
     final_list = list(all_outcomes.values())
     print(f"Toplam outcomes: {len(final_list)} (reused: {len(reused)}, new: {len(new_per_pool)})")
-    
+
     inc = [r for r in final_list if r.get("status") == "included"]
     if not inc:
-        print("HATA: payda boş.", file=sys.stderr); sys.exit(1)
-    
+        # FIX: erken çıkma yok — status dağılımını yazdır, outcomes yine yazılsın
+        _sd = Counter(r.get("status") for r in final_list)
+        print(f"UYARI: included=0, status dağılımı: {dict(_sd)}", file=sys.stderr)
+
     total_rug = sum(1 for r in inc if r.get("rug_24h"))
     total_trusted = sum(1 for r in inc if r.get("is_trusted"))
     dead_pools = sum(1 for r in inc if r.get("is_dead_pool"))
-    
+    # FIX: benzersiz token sayacı
+    unique_tokens = len({r["token"].lower() for r in inc})
+    unique_rug = len({r["token"].lower() for r in inc if r.get("rug_24h")})
+
     anomalies = {
         "honeypots": sum(1 for r in inc if r.get("is_honeypot")),
         "wash_trading": sum(1 for r in inc if r.get("is_wash_trade")),
@@ -402,27 +412,32 @@ async def main():
         "bot_activity": sum(1 for r in inc if r.get("is_bot_activity")),
         "flipping_networks": sum(1 for r in inc if r.get("is_flipping_network")),
         "sniper_attacks": sum(1 for r in inc if r.get("early_snipers", 0) > 3),
+        "pools_without_any_swap": sum(1 for r in inc if r.get("swap_count", 0) == 0),
     }
-    
+
     result = {
         "schema": 6,
-        "rules_version": "v0.6-cumulative",
+        "rules_version": "v0.7-fixed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": LOOKBACK_HOURS,
         "overall": rate_block(total_rug, len(inc)),
+        "overall_unique": rate_block(unique_rug, unique_tokens),
+        "unique_tokens": unique_tokens,
+        "verdicts": len(inc),
         "trusted_tokens": {"n": total_trusted, "total": len(inc)},
         "dead_pools": {"n": dead_pools, "total": len(inc)},
         "anomalies_summary": anomalies,
     }
-    
+
     OUT.write_text(json.dumps(result, indent=2))
     with open(OUT_JSONL, "w") as f:
         for p in final_list:
             f.write(json.dumps(p) + "\n")
-    
+
     o = result["overall"]
     print(f"\n=== SONUÇ (Kümülatif) ===")
-    print(f"payda={o['n']} rug={o['rug']} oran={o['rate']}")
+    print(f"verdicts={o['n']}  rug={o['rug']}  oran={o['rate']}")
+    print(f"unique_tokens={unique_tokens}  unique_rug={unique_rug}")
     print(f"Trusted: {total_trusted}, Dead: {dead_pools}")
     print(f"Anomaliler: {anomalies}")
 

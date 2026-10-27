@@ -41,7 +41,7 @@ env:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150 # 24h analizi uzayabileceği için job süresini biraz artırdık (120 -> 150)
     env:
       HAS_R2: ${{ secrets.R2_ENDPOINT != '' }}
 
@@ -166,13 +166,17 @@ jobs:
         run: python -m collar_watch.collar
 
       # 3. 24 SAATLİK SONUÇLARI HESAPLA (Geçmiş + Bugün)
+      # RPC 429 sorununu çözmek için RPC_RPS düşürüldü ve hata yönetimi eklendi
       - name: Track 24h Outcomes (LP Pulls + Anomalies)
-        timeout-minutes: 15
+        timeout-minutes: 30 # RPC yavaşlığından dolayı süre 15'ten 30'a çıkarıldı
         env:
           RPC_URL: ${{ env.ROBINHOOD_RPC }}
           POOL_MANAGER: ${{ env.POOL_MANAGER }}
           OUTCOMES_OUT: "outcomes.json"
           OUTCOMES_OUT_JSONL: "outcomes.jsonl"
+          RPC_RPS: "2"           # KRİTİK: Saniyede 5 istek yerine 2 istek (429'u önler)
+          START_RANGE: "10000"
+          MIN_RANGE: "500"
         run: python -m collar_watch.outcomes
 
       - name: Build UI JSON (sanity gate)

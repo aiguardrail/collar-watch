@@ -17,13 +17,14 @@ COLLAR_URL = os.getenv("COLLAR_MCP_URL", "https://api.collarguardrail.com/mcp-ht
 COLLAR_KEY = os.getenv("COLLAR_API_KEY", "").strip()
 DELAY_SEC = float(os.getenv("DELAY_SEC", "180"))
 TIMEOUT_SEC = float(os.getenv("TIMEOUT_SEC", "30"))
-REQ_PER_MIN = float(os.getenv("REQ_PER_MIN", "8")) # 22 yerine 8 (Güvenli liman)
-CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))  # 5 yerine 1 (Kesin sıralı geçiş)
+REQ_PER_MIN = float(os.getenv("REQ_PER_MIN", "8"))
+CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))
 LIMIT = int(os.getenv("LIMIT", "0"))
 
 POOL_INTERVAL_SEC = 1.2 * 2 * 60.0 / REQ_PER_MIN
 OK_DECISIONS = {"ALLOW", "WARN", "DENY"}
 SEVERITY_MAP = {"safe": "ALLOW", "warn": "WARN", "danger": "DENY"}
+
 
 class RateLimiter:
     def __init__(self, per_minute: float):
@@ -39,12 +40,15 @@ class RateLimiter:
                 await asyncio.sleep(wait)
             self._next = max(now, self._next) + self.interval
 
+
 rate_limiter = RateLimiter(REQ_PER_MIN)
+
 
 def _base_headers() -> dict:
     h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
     if COLLAR_KEY: h["Authorization"] = f"Bearer {COLLAR_KEY}"
     return h
+
 
 def _parse_body(r: httpx.Response) -> dict:
     ctype = r.headers.get("content-type", "")
@@ -58,13 +62,16 @@ def _parse_body(r: httpx.Response) -> dict:
         raise ValueError(f"SSE: no valid JSON-RPC in {len(data_lines)} data lines")
     return r.json()
 
+
 def _extract_text(result: dict) -> str:
     content = result.get("content", [])
     if content and content[0].get("type") == "text": return content[0].get("text", "")
     return ""
 
+
 def build_args(token: str) -> dict:
     return {"contract_address": token}
+
 
 async def _post_with_retry(client: httpx.AsyncClient, headers: dict, payload: dict, retries: int = 4) -> httpx.Response:
     last_exc = None
@@ -73,10 +80,9 @@ async def _post_with_retry(client: httpx.AsyncClient, headers: dict, payload: di
             r = await client.post(COLLAR_URL, headers=headers, json=payload, follow_redirects=True)
             if r.status_code == 429 or r.status_code >= 500:
                 if attempt < retries:
-                    # Retry-After varsa ona uy, yoksa exponential backoff + jitter
                     try: wait = float(r.headers.get("retry-after", 10 * (2 ** attempt)))
                     except (ValueError, TypeError): wait = 10.0 * (2 ** attempt)
-                    wait += random.uniform(1, 5) # Jitter ekle
+                    wait += random.uniform(1, 5)
                     print(f"  HTTP {r.status_code} → {wait:.1f}s bekleniyor", file=sys.stderr)
                     await asyncio.sleep(wait)
                     continue
@@ -89,6 +95,7 @@ async def _post_with_retry(client: httpx.AsyncClient, headers: dict, payload: di
             raise
     if last_exc: raise last_exc
     raise RuntimeError("retry döngüsü bitti")
+
 
 async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None) -> tuple[dict | None, str]:
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
@@ -124,6 +131,7 @@ async def preflight(client: httpx.AsyncClient, smoke_token: str | None = None) -
     print("=== END PREFLIGHT ===\n")
     return schema, ""
 
+
 async def _do_call(client: httpx.AsyncClient, token: str, session_id: str, schema: dict, stamp: dict | None = None) -> dict:
     headers = _base_headers()
     if session_id: headers["Mcp-Session-Id"] = session_id
@@ -156,11 +164,10 @@ async def _do_call(client: httpx.AsyncClient, token: str, session_id: str, schem
         except json.JSONDecodeError as e:
             return {"decision": "ERROR", "severity": None, "risk_factors": [], "sell_simulation_ok": None, "reason": f"non-json: {e}", "raw": raw_text}
 
-        # JSON İÇİNDEKİ GİZLİ 429'U YAKALAMA (Madde 1)
         if inner.get("error") is not None:
             err_str = str(inner.get("error")).lower()
             if "429" in err_str or "rate limit" in err_str:
-                wait = (15.0 * (2 ** attempt)) + random.uniform(2, 8) # 15s, 30s, 60s + jitter
+                wait = (15.0 * (2 ** attempt)) + random.uniform(2, 8)
                 print(f"  [JSON 429] Tool Rate Limit. {wait:.1f}s bekleniyor (Deneme {attempt+1}/{max_retries})", file=sys.stderr)
                 await asyncio.sleep(wait)
                 continue
@@ -182,6 +189,7 @@ async def _do_call(client: httpx.AsyncClient, token: str, session_id: str, schem
     
     return {"decision": "ERROR", "severity": None, "risk_factors": [], "sell_simulation_ok": None, "reason": "Max retries exceeded for tool rate limit", "raw": ""}
 
+
 async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
     payload = {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "collar-watch", "version": "0.1.0"}}}
     await rate_limiter.acquire()
@@ -192,6 +200,7 @@ async def mcp_initialize(client: httpx.AsyncClient) -> tuple[str, str]:
         if "error" in body: return "", f"init error: {body['error']}"
         return r.headers.get("mcp-session-id", ""), ""
     except Exception as e: return "", f"{type(e).__name__}: {e}"
+
 
 async def evaluate_pool(sem: asyncio.Semaphore, client: httpx.AsyncClient, session_id: str, schema: dict, pool: dict, idx: int, total: int) -> dict:
     token = pool["token"]
@@ -213,6 +222,7 @@ async def evaluate_pool(sem: asyncio.Semaphore, client: httpx.AsyncClient, sessi
         "t0": t0, "t3m": t3m, "changed": changed, "evaluated_at": datetime.now(timezone.utc).isoformat(),
     }
 
+
 def load_pools(path: Path) -> list[dict]:
     if not path.exists():
         print(f"HATA: {path} yok.", file=sys.stderr)
@@ -226,10 +236,29 @@ def load_pools(path: Path) -> list[dict]:
                 except json.JSONDecodeError: continue
     return pools
 
+
+# --- GEÇMİŞ VERİYİ YÜKLEME (24 SAATLİK ANALİZ İÇİN) ---
+def load_previous_evals(path: Path) -> dict[str, dict]:
+    """Eski değerlendirmeleri token bazında yükler (tekrarları önler)."""
+    evals = {}
+    if path.exists():
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        rec = json.loads(line)
+                        if "token" in rec:
+                            evals[rec["token"]] = rec
+                    except json.JSONDecodeError:
+                        continue
+    return evals
+
+
 async def main():
     pools = load_pools(SAMPLED)
     
-    # MADDE 4: HAVUZU DEDUPLİKE ET (Aynı token'ı tekrar sorgulama)
+    # HAVUZU DEDUPLİKE ET
     unique_pools = {}
     for p in pools:
         if p["token"] not in unique_pools:
@@ -248,6 +277,10 @@ async def main():
     print(f"Concurrency: {CONCURRENCY}, delay: {DELAY_SEC}s")
     print("=" * 60)
     if total == 0: sys.exit(1)
+
+    # Eski verileri hafızaya al (silmeyeceğiz, birleştireceğiz)
+    all_evals = load_previous_evals(OUT)
+    print(f"Geçmişten {len(all_evals)} adet değerlendirme yüklendi.")
 
     results = []
     start = time.time()
@@ -270,28 +303,36 @@ async def main():
             await asyncio.sleep(i * POOL_INTERVAL_SEC)
             return await evaluate_pool(sem, client, session_id, schema, pool, i + 1, total)
 
-        with open(OUT, "w") as f:
-            sem = asyncio.Semaphore(CONCURRENCY)
-            tasks = [launch(i, pool) for i, pool in enumerate(pools)]
-            for coro in asyncio.as_completed(tasks):
-                try: rec = await coro
-                except Exception as e:
-                    print(f"Havuz hatası: {e}", file=sys.stderr)
-                    continue
+        # Dosyayı baştan yazmak yerine, önce bellekte birleştirip sonra yazacağız
+        sem = asyncio.Semaphore(CONCURRENCY)
+        tasks = [launch(i, pool) for i, pool in enumerate(pools)]
+        
+        for coro in asyncio.as_completed(tasks):
+            try: 
+                rec = await coro
                 results.append(rec)
-                f.write(json.dumps(rec) + "\n")
-                f.flush()
+                # Yeni sonucu hafızadaki sözlüğe ekle/güncelle
+                all_evals[rec["token"]] = rec
+            except Exception as e:
+                print(f"Havuz hatası: {e}", file=sys.stderr)
+                continue
+
+    # Şimdi tüm verileri (eski + yeni) tek seferde dosyaya yaz
+    with open(OUT, "w") as f:
+        for token, rec in all_evals.items():
+            f.write(json.dumps(rec) + "\n")
 
     elapsed = time.time() - start
     print("=" * 60)
-    print(f"Tamamlandı: {len(results)} / {total} havuz, {elapsed:.0f}s")
+    print(f"Bu turda tamamlanan: {len(results)} / {total} havuz, {elapsed:.0f}s")
+    print(f"Toplam kayıt (Geçmiş + Yeni): {len(all_evals)}")
 
     t0_decisions = Counter(r["t0"]["decision"] for r in results)
     t3m_decisions = Counter(r["t3m"]["decision"] for r in results)
     changed_count = sum(1 for r in results if r["changed"])
     
-    print(f"\nT+0 kararlar: {dict(t0_decisions)}")
-    print(f"T+3dk kararlar: {dict(t3m_decisions)}")
+    print(f"\nBugünün T+0 kararları: {dict(t0_decisions)}")
+    print(f"Bugünün T+3dk kararları: {dict(t3m_decisions)}")
     print(f"Değişen: {changed_count} / {len(results)}")
     print(f"Yazıldı: {OUT}")
 

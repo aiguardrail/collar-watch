@@ -18,7 +18,7 @@ on:
       concurrency:
         description: "Paralel havuz sayısı"
         required: false
-        default: "5"
+        default: "2"
 
 permissions:
   contents: write   # live-data branch'ine push için gerekli

@@ -31,7 +31,7 @@ MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))            # Küçültüldü (500
 RPC_RPS = float(os.getenv("RPC_RPS", "3"))                 # 2 -> 3 (biraz hızlı)
 
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
-SWAP_TOPIC = "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8"
+SWAP_TOPIC = "0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f"
 USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
 
 DEFAULT_QUOTES = f"{USDG_ADDRESS},0x0000000000000000000000000000000000000000"

@@ -1,4 +1,4 @@
-"""outcomes.py - v0.5 (Cumulative + Rolling Window)"""
+"""outcomes.py - v0.6 (Cumulative + Fixed Rolling Window)"""
 import asyncio
 import json
 import math
@@ -25,10 +25,10 @@ OUT_JSONL = Path(os.getenv("OUTCOMES_OUT_JSONL", "outcomes.jsonl"))
 LP_PULL_THRESHOLD = float(os.getenv("LP_PULL_THRESHOLD", "0.90"))
 PRICE_CRASH_THRESHOLD = float(os.getenv("PRICE_CRASH_THRESHOLD", "0.95"))
 LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
-LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "168"))  # 7 gün default
-START_RANGE = int(os.getenv("START_RANGE", "10000"))
-MIN_RANGE = int(os.getenv("MIN_RANGE", "500"))
-RPC_RPS = float(os.getenv("RPC_RPS", "2"))
+LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))  # İlk çalıştırma için 24 saat yeterli
+START_RANGE = int(os.getenv("START_RANGE", "2000"))       # Küçültüldü (10000 -> 2000)
+MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))            # Küçültüldü (500 -> 200)
+RPC_RPS = float(os.getenv("RPC_RPS", "3"))                 # 2 -> 3 (biraz hızlı)
 
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
 SWAP_TOPIC = "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8"
@@ -55,7 +55,7 @@ async def _throttle():
         _rate["next"] = max(now, _rate["next"]) + 1.0 / RPC_RPS
     if wait > 0: await asyncio.sleep(wait)
 
-async def rpc(client, method, params, retries=6):
+async def rpc(client, method, params, retries=10):
     last = None
     for a in range(retries + 1):
         try:
@@ -66,8 +66,8 @@ async def rpc(client, method, params, retries=6):
                 try: wait = float(r.headers.get("retry-after", 0))
                 except: wait = 0
                 if wait <= 0: wait = (2 ** a) + random.uniform(0, 1)
-                wait = min(wait, 60)
-                print(f"  RPC {method} HTTP {r.status_code} → {wait:.1f}s", file=sys.stderr)
+                wait = min(wait, 30)  # Max 30 saniye (60 yerine)
+                print(f"  RPC {method} HTTP {r.status_code} → {wait:.1f}s (deneme {a+1}/{retries})", file=sys.stderr)
                 await asyncio.sleep(wait)
                 continue
             d = r.json()
@@ -75,7 +75,7 @@ async def rpc(client, method, params, retries=6):
             return d["result"]
         except (httpx.TransportError, ValueError) as e:
             last = f"{type(e).__name__}: {e}"
-            await asyncio.sleep(2.0 * (a + 1))
+            await asyncio.sleep(min(2.0 * (a + 1), 20))
     raise RuntimeError(f"rpc {method} başarısız: {last}")
 
 def _jsonl(path):
@@ -134,7 +134,6 @@ def load_pools():
     return list(merged.values())
 
 def load_previous_outcomes():
-    """Load previous outcomes.jsonl to reuse old results."""
     out = {}
     for rec in _jsonl(OUT_JSONL):
         tk = (rec.get("token") or "").lower()
@@ -176,6 +175,7 @@ async def scan_chain(client, from_block, to_block):
     swap_series = defaultdict(list)
     size, cap, frm, ok_streak, calls = START_RANGE, START_RANGE, from_block, 0, 0
     t0 = time.time()
+    total_blocks = max(1, to_block - from_block + 1)
     while frm <= to_block:
         to = min(frm + size - 1, to_block)
         try:
@@ -202,7 +202,8 @@ async def scan_chain(client, from_block, to_block):
             cap = min(START_RANGE, int(cap * 1.5))
             size, ok_streak = cap, 0
         if calls % 20 == 0:
-            print(f"  tarama %{(frm - from_block) / max(1, to_block - from_block + 1) * 100:.0f} | çağrı={calls}", flush=True)
+            pct = (frm - from_block) / total_blocks * 100
+            print(f"  tarama %{pct:.0f} | çağrı={calls} | aralık={size}", flush=True)
     for pid in liq_series: liq_series[pid].sort(key=lambda x: x[0])
     for pid in swap_series: swap_series[pid].sort(key=lambda x: x[0])
     print(f"tarama bitti: {calls} çağrı, likidite={len(liq_series)}, swap={len(swap_series)}")
@@ -314,9 +315,8 @@ async def main():
         bps = await blocks_per_sec(client, from_block_all, head)
         window_blocks = int(LP_WINDOW_SEC * bps)
         lookback_blocks = int(LOOKBACK_HOURS * 3600 * bps)
-        to_block = min(head, max(p["block"] for p in pools) + window_blocks)
     
-    # Sınıflandırma: reused vs to_scan
+    # is_old: 24 saatlik penceresi dolmuş mu?
     current_tokens = {p["token"].lower(): p for p in pools}
     reused = {}
     to_scan = []
@@ -324,13 +324,16 @@ async def main():
     for p in pools:
         tk = p["token"].lower()
         prev_out = prev_outcomes.get(tk)
-        is_old = p["block"] + window_blocks <= head - lookback_blocks
+        is_old = p["block"] + window_blocks <= head  # Pencere dolmuş mu?
         has_good_prev = prev_out and prev_out.get("swap_count", 0) > 0
         
         if is_old and has_good_prev:
-            reused[tk] = prev_out  # reuse
+            reused[tk] = prev_out
+        elif is_old:  # Eski ama prev yok, taranmalı
+            to_scan.append(p)
+        # else: yeni, taranacak (pencere dolmamış)
         else:
-            to_scan.append(p)  # rescan
+            to_scan.append(p)
     
     # Keep old outcomes for tokens NOT in current events (cumulative)
     for tk, prev_out in prev_outcomes.items():
@@ -339,10 +342,13 @@ async def main():
     
     print(f"Reused: {len(reused)} | To scan: {len(to_scan)} | Lookback: {LOOKBACK_HOURS}h")
     
-    # Scan only needed range
     new_per_pool = []
     if to_scan:
-        min_scan_block = min(p["block"] for p in to_scan)
+        # ÖNEMLİ: from_block = max(head - lookback_blocks, min_scan_block)
+        min_scan_block = max(head - lookback_blocks, min(p["block"] for p in to_scan))
+        to_block = head  # Pencere dolmamış havuzlar zaten immature olacak
+        print(f"Tarama aralığı: {min_scan_block} -> {to_block} ({to_block - min_scan_block} blok)")
+        
         async with httpx.AsyncClient(timeout=30) as client:
             liq_series, swap_series = await scan_chain(client, min_scan_block, to_block)
         
@@ -371,9 +377,9 @@ async def main():
                 "max_drawdown_pct": round(a["max_drawdown_liq"] * 100, 1),
                 "price_drop_pct": a["max_price_dd_pct"],
                 "pool_id": pid,
+                "hook_addr": p.get("hook_addr"),  # Gerçek hook adresi eklendi
             })
     
-    # Combine: reused + new
     all_outcomes = dict(reused)
     for r in new_per_pool:
         all_outcomes[r["token"].lower()] = r
@@ -381,7 +387,6 @@ async def main():
     final_list = list(all_outcomes.values())
     print(f"Toplam outcomes: {len(final_list)} (reused: {len(reused)}, new: {len(new_per_pool)})")
     
-    # Compute cumulative stats
     inc = [r for r in final_list if r.get("status") == "included"]
     if not inc:
         print("HATA: payda boş.", file=sys.stderr); sys.exit(1)
@@ -400,8 +405,8 @@ async def main():
     }
     
     result = {
-        "schema": 5,
-        "rules_version": "v0.5-cumulative",
+        "schema": 6,
+        "rules_version": "v0.6-cumulative",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": LOOKBACK_HOURS,
         "overall": rate_block(total_rug, len(inc)),

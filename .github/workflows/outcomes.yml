@@ -37,14 +37,18 @@ jobs:
 
       - name: Run outcomes
         env:
+          # Alchemy — public RPC'nin 429 sorununu ortadan kaldırır
+          RPC_URL: ${{ secrets.ALCHEMY_RPC }}
           POOL_MANAGER: ${{ vars.POOL_MANAGER }}
           QUOTE_ADDRS: ${{ vars.QUOTE_ADDRS }}
           HOOK_LABELS: ${{ vars.HOOK_LABELS }}
           SOURCES: ${{ inputs.sources || 'backfill' }}
           EVENTS_PATH: ${{ inputs.events_path || 'events.jsonl' }}
-          RPC_RPS: "1"
-          START_RANGE: "10000"
-          MIN_RANGE: "500"
+          # Alchemy için agresif ayarlar (public RPC'nin 1/10000/500/72 ayarlarından farklı)
+          RPC_RPS: "5"
+          START_RANGE: "100000"
+          MIN_RANGE: "1000"
+          COOLDOWN_EVERY: "999"
           LOOKBACK_HOURS: "72"
         run: |
           if [ -z "$POOL_MANAGER" ]; then

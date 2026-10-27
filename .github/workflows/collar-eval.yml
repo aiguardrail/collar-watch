@@ -20,8 +20,12 @@ on:
         required: false
         default: "1"
 
+  schedule:
+    # HER GÜN UTC 00:00'da çalış (Türkiye saatiyle sabah 03:00)
+    - cron: '0 0 * * *' 
+
 permissions:
-  contents: write   # live-data branch'ine push için gerekli
+  contents: write
 
 concurrency:
   group: collar-eval
@@ -39,7 +43,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      # Secret'lar step "if" içinde doğrudan okunamaz; job env üzerinden bayrak
       HAS_R2: ${{ secrets.R2_ENDPOINT != '' }}
 
     steps:
@@ -56,10 +59,10 @@ jobs:
 
       - name: Validate inputs
         env:
-          BACKFILL_HOURS: ${{ inputs.backfill_hours }}
-          SAMPLE_RATE: ${{ inputs.sample_rate }}
-          DELAY_SEC: ${{ inputs.delay_sec }}
-          CONCURRENCY: ${{ inputs.concurrency }}
+          BACKFILL_HOURS: ${{ inputs.backfill_hours || '48' }}
+          SAMPLE_RATE: ${{ inputs.sample_rate || '0.03' }}
+          DELAY_SEC: ${{ inputs.delay_sec || '180' }}
+          CONCURRENCY: ${{ inputs.concurrency || '1' }}
         run: |
           python - <<'PY'
           import os, sys
@@ -79,7 +82,6 @@ jobs:
               print("::warning::delay_sec < 150: bu koşu 'T+3dk' ölçmez (SMOKE). Yayınlanmayacak.")
           PY
 
-      # Collar erişilemiyorsa/auth bozuksa 12 dk backfill'den ÖNCE öğren
       - name: Collar preflight (erken kontrol)
         env:
           COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
@@ -87,7 +89,6 @@ jobs:
           python - <<'PY'
           import asyncio, sys, httpx
           from collar_watch import collar as C
-
           async def main():
               async with httpx.AsyncClient(timeout=C.TIMEOUT_SEC) as client:
                   schema, err = await C.preflight(client, None)
@@ -95,12 +96,12 @@ jobs:
                       sys.exit(f"Collar preflight başarısız: {err}")
           asyncio.run(main())
           PY
-          sleep 10 # Ana run başlamadan önce rate limit kovasının nefes almasını sağlar
+          sleep 10
 
       - name: Backfill (48h)
         timeout-minutes: 20
         env:
-          BACKFILL_HOURS: ${{ inputs.backfill_hours }}
+          BACKFILL_HOURS: ${{ inputs.backfill_hours || '48' }}
           DURATION_HOURS: "0"
           TRACK_LIQUIDITY: "0"
           RPC_RPS: "5"
@@ -112,11 +113,10 @@ jobs:
       - name: Sample
         timeout-minutes: 5
         env:
-          SAMPLE_RATE: ${{ inputs.sample_rate }}
+          SAMPLE_RATE: ${{ inputs.sample_rate || '0.03' }}
           SEED: "42"
         run: python -m collar_watch.sampler
 
-      # Collar aşamasına (30+ dk) girmeden önce örneklemi doğrula
       - name: Verify sample (ZERO + meta kontrolü)
         run: |
           echo "=== satır sayısı ==="
@@ -139,27 +139,34 @@ jobs:
           echo "=== sample-meta.json ==="
           cat sample-meta.json
 
+      # YENİ ADIM: 24 Saatlik Likidite (Rug) Analizi
+      - name: Track 24h Outcomes (LP Pulls)
+        timeout-minutes: 15
+        env:
+          RPC_URL: ${{ env.ROBINHOOD_RPC }}
+          POOL_MANAGER: ${{ env.POOL_MANAGER }}
+          OUTCOMES_OUT: "outcomes.json"
+          OUTCOMES_OUT_JSONL: "outcomes.jsonl"
+        run: python -m collar_watch.outcomes
+
       - name: Evaluate with Collar
         timeout-minutes: 100
         env:
           COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
-          DELAY_SEC: ${{ inputs.delay_sec }}
-          CONCURRENCY: ${{ inputs.concurrency }}
+          DELAY_SEC: ${{ inputs.delay_sec || '180' }}
+          CONCURRENCY: ${{ inputs.concurrency || '1' }}
           REQ_PER_MIN: "8"
         run: python -m collar_watch.collar
 
       - name: Build UI JSON (sanity gate)
         if: success()
         env:
-          DELAY_SEC: ${{ inputs.delay_sec }}
+          DELAY_SEC: ${{ inputs.delay_sec || '180' }}
         run: python -m collar_watch.publish
 
-      # YENİ: live-data branch'ine push — scorecard.html'in okuduğu public kaynak.
-      # R2'den bağımsız çalışır, R2 secret'ı olmasa bile dosyalar yayınlanır.
       - name: Push to live-data (public fallback)
-        if: success() && fromJSON(inputs.delay_sec) >= 150
+        if: success() && fromJSON(inputs.delay_sec || '180') >= 150
         env:
-          # 'data/' backfill tarafından zaten kullanılıyor; çakışmasın diye ayrı dizin
           DATA_DIR: publish-data
           DATA_BRANCH: live-data
         run: |
@@ -167,36 +174,29 @@ jobs:
           setup_data_branch
           cp scorecard.json "$DATA_DIR/" 2>/dev/null || true
           cp recent.json "$DATA_DIR/" 2>/dev/null || true
-          commit_push scorecard.json recent.json
+          cp outcomes.json "$DATA_DIR/" 2>/dev/null || true   # <-- OUTCOMES.JSON EKLENDİ
+          commit_push scorecard.json recent.json outcomes.json
           echo "✓ live-data branch'ine push edildi"
 
-      # Smoke koşusu (delay<150) ya da R2 kurulu değilse yayın atlanır:
-      # yanlışlıkla canlı scorecard.json'ı çöp veriyle ezmesin.
       - name: Publish to R2
-        if: success() && env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec) >= 150
+        if: success() && env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec || '180') >= 150
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
           AWS_DEFAULT_REGION: auto
-          # R2, yeni awscli'nin varsayılan checksum başlıklarını reddedebilir
           AWS_REQUEST_CHECKSUM_CALCULATION: when_required
           AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
           pip install awscli
-          aws s3 cp recent.json s3://collar-data/recent.json \
-            --endpoint-url "$R2_ENDPOINT" \
-            --cache-control "public, max-age=300" \
-            --content-type "application/json"
-          aws s3 cp scorecard.json s3://collar-data/scorecard.json \
-            --endpoint-url "$R2_ENDPOINT" \
-            --cache-control "public, max-age=300" \
-            --content-type "application/json"
+          aws s3 cp recent.json s3://collar-data/recent.json --endpoint-url "$R2_ENDPOINT" --cache-control "public, max-age=300" --content-type "application/json"
+          aws s3 cp scorecard.json s3://collar-data/scorecard.json --endpoint-url "$R2_ENDPOINT" --cache-control "public, max-age=300" --content-type "application/json"
+          aws s3 cp outcomes.json s3://collar-data/outcomes.json --endpoint-url "$R2_ENDPOINT" --cache-control "public, max-age=300" --content-type "application/json"
           echo "✓ R2'ye yayınlandı"
 
       - name: Publish atlandı (bilgi)
-        if: success() && !(env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec) >= 150)
-        run: echo "::notice::R2 yayını atlandı (R2 secret yok ya da delay_sec < 150). live-data push yine de çalıştı."
+        if: success() && !(env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec || '180') >= 150)
+        run: echo "::notice::R2 yayını atlandı. live-data push yine de çalıştı."
 
       - name: Show result
         if: always()
@@ -206,51 +206,17 @@ jobs:
             echo ""
             if [ -f evaluations.jsonl ]; then
               echo "Değerlendirilen havuz: **$(wc -l < evaluations.jsonl)**"
-              echo ""
-              echo "#### İlk 3 değerlendirme"
-              echo '```json'
-              head -3 evaluations.jsonl
-              echo '```'
             else
               echo "❌ evaluations.jsonl yok"
             fi
-            echo ""
-            if [ -f scorecard.json ]; then
-              echo "#### Scorecard özeti"
-              echo '```json'
-              head -40 scorecard.json
-              echo '```'
-            fi
-            echo ""
-            if [ -f counter-summary.json ]; then
-              echo "<details><summary>counter-summary.json</summary>"
+            if [ -f outcomes.json ]; then
               echo ""
+              echo "#### Outcomes (Rug) Özeti"
               echo '```json'
-              head -30 counter-summary.json
+              python -c "import json; d=json.load(open('outcomes.json')); print(json.dumps({'overall': d.get('overall'), 'exclusions': d.get('exclusions')}, indent=2))"
               echo '```'
-              echo "</details>"
             fi
           } | tee -a "$GITHUB_STEP_SUMMARY"
-
-      # Yayından önce göz ucuyla bak: gerçek T+3dk gecikmesi ve hook yoğunluğu
-      - name: Gap + hook özeti
-        if: always()
-        run: |
-          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import collections, json, os, statistics
-          p = "evaluations.jsonl"
-          if not os.path.exists(p):
-              raise SystemExit(0)
-          rows = [json.loads(l) for l in open(p) if l.strip()]
-          gaps = [r["t3m_gap_sec"] for r in rows if r.get("t3m_gap_sec") is not None]
-          hooks = collections.Counter(str(r.get("hook")) for r in rows)
-          print("#### Gap + hook")
-          if gaps:
-              print(f"- T+3dk gap: median={statistics.median(gaps):.0f}s "
-                    f"min={min(gaps)}s max={max(gaps)}s (n={len(gaps)})")
-          for h, c in hooks.most_common(5):
-              print(f"- hook {h}: {c} ({c / len(rows):.0%})")
-          PY
 
       - name: Upload
         if: always()
@@ -261,6 +227,8 @@ jobs:
           if-no-files-found: warn
           path: |
             evaluations.jsonl
+            outcomes.json
+            outcomes.jsonl
             sampled-pools.jsonl
             sample-meta.json
             scorecard.json

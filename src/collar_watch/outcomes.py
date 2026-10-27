@@ -1,4 +1,4 @@
-"""outcomes.py - v0.7 (Cumulative + Fixed Rolling Window + Trusted/Dead Fix)"""
+"""outcomes.py - v0.7.1 (Cumulative + Fixed Rolling Window + Trusted/Dead Fix + Rate-limit hardening)"""
 import asyncio
 import json
 import math
@@ -29,6 +29,9 @@ LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))
 START_RANGE = int(os.getenv("START_RANGE", "2000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
 RPC_RPS = float(os.getenv("RPC_RPS", "3"))
+# YENİ: 429 fırtınasında nefes alma
+COOLDOWN_EVERY = int(os.getenv("COOLDOWN_EVERY", "50"))
+COOLDOWN_SEC = float(os.getenv("COOLDOWN_SEC", "20"))
 
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
 SWAP_TOPIC = "0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f"
@@ -59,9 +62,10 @@ async def _throttle():
         _rate["next"] = max(now, _rate["next"]) + 1.0 / RPC_RPS
     if wait > 0: await asyncio.sleep(wait)
 
-async def rpc(client, method, params, retries=10):
+async def rpc(client, method, params, retries=20):
+    """FIX: retries 10→20, max bekleme 30s→120s. Public RPC rate limit'lerine dayanıklı."""
     last = None
-    for a in range(retries + 1):
+    for a in range(retries):
         try:
             await _throttle()
             r = await client.post(RPC_URL, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
@@ -69,8 +73,8 @@ async def rpc(client, method, params, retries=10):
                 last = f"HTTP {r.status_code}"
                 try: wait = float(r.headers.get("retry-after", 0))
                 except: wait = 0
-                if wait <= 0: wait = (2 ** a) + random.uniform(0, 1)
-                wait = min(wait, 30)
+                if wait <= 0: wait = (2 ** min(a, 6)) + random.uniform(0, 1)
+                wait = min(wait, 120)
                 print(f"  RPC {method} HTTP {r.status_code} → {wait:.1f}s (deneme {a+1}/{retries})", file=sys.stderr)
                 await asyncio.sleep(wait)
                 continue
@@ -79,8 +83,8 @@ async def rpc(client, method, params, retries=10):
             return d["result"]
         except (httpx.TransportError, ValueError) as e:
             last = f"{type(e).__name__}: {e}"
-            await asyncio.sleep(min(2.0 * (a + 1), 20))
-    raise RuntimeError(f"rpc {method} başarısız: {last}")
+            await asyncio.sleep(min(2.0 * (a + 1), 30))
+    raise RuntimeError(f"rpc {method} başarısız ({retries} deneme): {last}")
 
 def _jsonl(path):
     if not path.exists(): return
@@ -192,6 +196,10 @@ async def scan_chain(client, from_block, to_block):
             cap, ok_streak = size, 0
             continue
         calls += 1
+        # YENİ: her COOLDOWN_EVERY çağrıda RPC'ye nefes aldır
+        if COOLDOWN_EVERY > 0 and calls % COOLDOWN_EVERY == 0:
+            print(f"  cooldown {COOLDOWN_SEC:.0f}s ({calls} çağrı) — RPC nefes alsın...", flush=True)
+            await asyncio.sleep(COOLDOWN_SEC)
         for lg in logs:
             t0t = lg["topics"][0].lower()
             if t0t == MODIFY_LIQ_TOPIC:
@@ -214,7 +222,6 @@ async def scan_chain(client, from_block, to_block):
     total_swaps = sum(len(v) for v in swap_series.values())
     print(f"tarama bitti: {calls} çağrı, likidite={total_liq} ({len(liq_series)} havuz), "
           f"swap={total_swaps} ({len(swap_series)} havuz)")
-    # Sanity: likidite var ama tek swap yok → SWAP_TOPIC yanlış olabilir
     if total_liq > 0 and total_swaps == 0:
         print(f"UYARI: likidite var ama tek swap logu yok. SWAP_TOPIC yanlış olabilir ({SWAP_TOPIC}).",
               file=sys.stderr)
@@ -283,7 +290,6 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
         if count / swap_count > 0.40: is_bot_activity = True
     flippers = buyer_wallets.intersection(seller_wallets)
     is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
-    # FIX: swap_count > 0 zorunlu — ölü havuz "trusted" görünmesin
     is_trusted = (swap_count > 0 and not price_crash and max_dd_liq < LP_PULL_THRESHOLD and
                   not is_honeypot and not is_wash_trade and not is_synchronized_dump and
                   not is_bot_activity and not is_flipping_network and early_snipers <= 3)
@@ -353,10 +359,13 @@ async def main():
 
     new_per_pool = []
     if to_scan:
-        # FIX: min() — eski havuzların oluşum bloğundan başla, lookback'te takılma
+        # FIX 1: min() — eski havuzların oluşum bloğundan başla
         min_scan_block = min(head - lookback_blocks, min(p["block"] for p in to_scan))
-        to_block = head
-        print(f"Tarama aralığı: {min_scan_block} -> {to_block} ({to_block - min_scan_block} blok)")
+        # FIX 2 (YENİ): to_block'u daralt — en son "24h penceresi biten havuz"un ötesini taramaya gerek yok
+        max_relevant = max(p["block"] + window_blocks for p in to_scan)
+        to_block = min(head, max_relevant)
+        print(f"Tarama aralığı: {min_scan_block} -> {to_block} "
+              f"({to_block - min_scan_block} blok, head={head}, saved={head - to_block} blok)", flush=True)
 
         async with httpx.AsyncClient(timeout=30) as client:
             liq_series, swap_series = await scan_chain(client, min_scan_block, to_block)
@@ -398,14 +407,12 @@ async def main():
 
     inc = [r for r in final_list if r.get("status") == "included"]
     if not inc:
-        # FIX: erken çıkma yok — status dağılımını yazdır, outcomes yine yazılsın
         _sd = Counter(r.get("status") for r in final_list)
         print(f"UYARI: included=0, status dağılımı: {dict(_sd)}", file=sys.stderr)
 
     total_rug = sum(1 for r in inc if r.get("rug_24h"))
     total_trusted = sum(1 for r in inc if r.get("is_trusted"))
     dead_pools = sum(1 for r in inc if r.get("is_dead_pool"))
-    # FIX: benzersiz token sayacı
     unique_tokens = len({r["token"].lower() for r in inc})
     unique_rug = len({r["token"].lower() for r in inc if r.get("rug_24h")})
 
@@ -419,9 +426,17 @@ async def main():
         "pools_without_any_swap": sum(1 for r in inc if r.get("swap_count", 0) == 0),
     }
 
+    # Hook bazında özet — Guardrail tier-3 advisory için
+    by_hook = defaultdict(lambda: {"n": 0, "rug": 0})
+    for r in inc:
+        h = (r.get("hook_addr") or "none").lower()
+        by_hook[h]["n"] += 1
+        if r.get("rug_24h"):
+            by_hook[h]["rug"] += 1
+
     result = {
         "schema": 6,
-        "rules_version": "v0.7-fixed",
+        "rules_version": "v0.7.1-fixed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": LOOKBACK_HOURS,
         "overall": rate_block(total_rug, len(inc)),
@@ -431,6 +446,11 @@ async def main():
         "trusted_tokens": {"n": total_trusted, "total": len(inc)},
         "dead_pools": {"n": dead_pools, "total": len(inc)},
         "anomalies_summary": anomalies,
+        "by_hook": {
+            h: {"n": v["n"], "rug": v["rug"],
+                "rug_rate": round(v["rug"]/v["n"], 4) if v["n"] else None}
+            for h, v in by_hook.items()
+        },
     }
 
     OUT.write_text(json.dumps(result, indent=2))
@@ -444,6 +464,7 @@ async def main():
     print(f"unique_tokens={unique_tokens}  unique_rug={unique_rug}")
     print(f"Trusted: {total_trusted}, Dead: {dead_pools}")
     print(f"Anomaliler: {anomalies}")
+    print(f"Hook sayısı: {len(by_hook)}")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,4 +1,4 @@
-"""outcomes.py - v0.6.1 (Cumulative + Initial Run Safety)"""
+"""outcomes.py - v0.6.2 (Initial run fix + swap debug)"""
 import asyncio
 import json
 import math
@@ -25,8 +25,7 @@ OUT_JSONL = Path(os.getenv("OUTCOMES_OUT_JSONL", "outcomes.jsonl"))
 LP_PULL_THRESHOLD = float(os.getenv("LP_PULL_THRESHOLD", "0.90"))
 PRICE_CRASH_THRESHOLD = float(os.getenv("PRICE_CRASH_THRESHOLD", "0.95"))
 LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
-LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))    # 24 saat önerilir
-MAX_INITIAL_BLOCKS = int(os.getenv("MAX_INITIAL_BLOCKS", "300000"))  # İlk çalıştırma koruması
+LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))
 START_RANGE = int(os.getenv("START_RANGE", "2000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
 RPC_RPS = float(os.getenv("RPC_RPS", "3"))
@@ -34,7 +33,7 @@ COOLDOWN_EVERY = int(os.getenv("COOLDOWN_EVERY", "100"))
 COOLDOWN_SEC = float(os.getenv("COOLDOWN_SEC", "15"))
 
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
-SWAP_TOPIC = "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8"
+SWAP_TOPIC = os.getenv("SWAP_TOPIC", "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8").strip().lower()
 USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
 
 DEFAULT_QUOTES = f"{USDG_ADDRESS},0x0000000000000000000000000000000000000000"
@@ -204,7 +203,6 @@ async def scan_chain(client, from_block, to_block):
         if ok_streak >= 15 and cap < START_RANGE:
             cap = min(START_RANGE, int(cap * 1.5))
             size, ok_streak = cap, 0
-        # Cooldown mekanizması: her N çağrıda bir mola
         if calls % COOLDOWN_EVERY == 0:
             print(f"  cooldown {COOLDOWN_SEC}s ({calls} çağrı)", flush=True)
             await asyncio.sleep(COOLDOWN_SEC)
@@ -213,7 +211,14 @@ async def scan_chain(client, from_block, to_block):
             print(f"  tarama %{pct:.0f} | çağrı={calls} | aralık={size}", flush=True)
     for pid in liq_series: liq_series[pid].sort(key=lambda x: x[0])
     for pid in swap_series: swap_series[pid].sort(key=lambda x: x[0])
-    print(f"tarama bitti: {calls} çağrı, likidite={len(liq_series)}, swap={len(swap_series)}")
+    
+    total_liq_events = sum(len(v) for v in liq_series.values())
+    total_swap_events = sum(len(v) for v in swap_series.values())
+    print(f"tarama bitti: {calls} çağrı, likidite_havuz={len(liq_series)}, swap_havuz={len(swap_series)}")
+    print(f"  event toplamı: likidite={total_liq_events}, swap={total_swap_events}")
+    if total_swap_events == 0:
+        print(f"  !! UYARI: Hiç Swap event yakalanmadı. SWAP_TOPIC={SWAP_TOPIC}")
+        print(f"  !! Kontrol için: cast keccak 'Swap(bytes32,address,int128,int128,uint160,uint128,int24,uint24)'")
     return liq_series, swap_series
 
 async def blocks_per_sec(client, from_block, head):
@@ -305,9 +310,9 @@ def rate_block(k, n):
     lo, hi = wilson_ci(k, n)
     return {"n": n, "rug": k, "rate": round(k / n, 4) if n else None, "ci95": [round(lo, 4), round(hi, 4)]}
 
-def make_pending(p):
+def make_pending(p, reason="pending_history"):
     return {
-        "token": p["token"], "rug_24h": False, "status": "pending_history",
+        "token": p["token"], "rug_24h": False, "status": reason,
         "is_lp_pull": False, "is_price_crash": False,
         "is_dead_pool": False, "is_trusted": False,
         "swap_count": 0, "unique_traders": 0,
@@ -334,8 +339,14 @@ async def main():
         from_block_all = min(p["block"] for p in pools)
         bps = await blocks_per_sec(client, from_block_all, head)
         window_blocks = int(LP_WINDOW_SEC * bps)
-        lookback_blocks = min(int(LOOKBACK_HOURS * 3600 * bps), MAX_INITIAL_BLOCKS)
-        print(f"bps={bps:.2f} | window={window_blocks:,} | lookback={lookback_blocks:,} blok (max {MAX_INITIAL_BLOCKS:,})")
+        lookback_blocks = int(LOOKBACK_HOURS * 3600 * bps)
+        
+        # KRİTİK: Mature havuzları da taramak için geriye doğru
+        # window_blocks + lookback_blocks kadar tara
+        scan_start = max(0, head - window_blocks - lookback_blocks)
+        
+        print(f"bps={bps:.2f} | window={window_blocks:,} | lookback={lookback_blocks:,}")
+        print(f"Scan range hedef: {scan_start} -> {head}")
     
     current_tokens = {p["token"].lower(): p for p in pools}
     reused = {}
@@ -344,29 +355,29 @@ async def main():
     for p in pools:
         tk = p["token"].lower()
         prev_out = prev_outcomes.get(tk)
-        is_old = p["block"] + window_blocks <= head
-        has_good_prev = prev_out and prev_out.get("swap_count", 0) > 0
+        has_good_prev = prev_out and prev_out.get("status") == "included"
         
-        if is_old and has_good_prev:
+        if has_good_prev:
             reused[tk] = prev_out
-        elif is_old and not has_good_prev:
-            # Eski ama geçmiş veri yok → pending_history olarak işaretle (tarama yok)
-            reused[tk] = make_pending(p)
+        elif p["block"] < scan_start:
+            # Scan aralığının dışında → geçmiş veri yok, pending
+            reused[tk] = make_pending(p, "pending_history")
         else:
-            # Henüz 24 saatlik penceresi dolmamış → taranacak
+            # Scan aralığında → taranacak
             to_scan.append(p)
     
     for tk, prev_out in prev_outcomes.items():
         if tk not in current_tokens:
             reused[tk] = prev_out
     
-    print(f"Reused: {len(reused)} | To scan: {len(to_scan)} | Lookback: {LOOKBACK_HOURS}h")
+    print(f"Reused: {len(reused)} | To scan: {len(to_scan)}")
     
     new_per_pool = []
     if to_scan:
-        min_scan_block = max(head - lookback_blocks, min(p["block"] for p in to_scan))
+        # to_scan'in en erken bloğundan başla
+        min_scan_block = max(scan_start, min(p["block"] for p in to_scan))
         to_block = head
-        print(f"Tarama aralığı: {min_scan_block} -> {to_block} ({to_block - min_scan_block} blok)")
+        print(f"Gerçek tarama: {min_scan_block} -> {to_block} ({to_block - min_scan_block:,} blok)")
         
         async with httpx.AsyncClient(timeout=30) as client:
             liq_series, swap_series = await scan_chain(client, min_scan_block, to_block)
@@ -376,9 +387,13 @@ async def main():
             a = analyze_pool(liq_series.get(pid, []), swap_series.get(pid, []),
                              p["block"], window_blocks, p.get("token_is_c0", False))
             mature = p["block"] + window_blocks <= head
-            if not mature: status = "immature"
-            elif a["n_add"] == 0: status = "no_liquidity_events"
-            else: status = "included"
+            
+            if not mature: 
+                status = "immature"
+            elif a["n_add"] == 0: 
+                status = "no_liquidity_events"
+            else: 
+                status = "included"
             
             is_lp_pull = status == "included" and a["max_drawdown_liq"] >= LP_PULL_THRESHOLD
             is_price_crash = status == "included" and a["price_crash"]
@@ -404,11 +419,40 @@ async def main():
         all_outcomes[r["token"].lower()] = r
     
     final_list = list(all_outcomes.values())
-    print(f"Toplam outcomes: {len(final_list)} (reused: {len(reused)}, new: {len(new_per_pool)})")
+    
+    # Status dağılımı
+    status_counts = Counter(r.get("status") for r in final_list)
+    print(f"Toplam outcomes: {len(final_list)}")
+    print(f"Status dağılımı: {dict(status_counts)}")
     
     inc = [r for r in final_list if r.get("status") == "included"]
+    
+    # KRİTİK: Boş inc durumunda ÇÖKME, geçerli JSON yaz
     if not inc:
-        print("HATA: payda boş.", file=sys.stderr); sys.exit(1)
+        print(f"\n!! Henüz 24 saatlik penceresi dolmuş havuz yok.")
+        print(f"!! Bu ilk çalıştırma için normaldir.")
+        print(f"!! Status dağılımı: {dict(status_counts)}")
+        print(f"!! Sonraki çalıştırmalarda 'included' havuzlar birikecek.")
+        
+        result = {
+            "schema": 6,
+            "rules_version": "v0.6.2-cumulative",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "lookback_hours": LOOKBACK_HOURS,
+            "overall": {"n": 0, "rug": 0, "rate": None, "ci95": [0.0, 1.0]},
+            "trusted_tokens": {"n": 0, "total": 0},
+            "dead_pools": {"n": 0, "total": 0},
+            "anomalies_summary": {
+                "honeypots": 0, "wash_trading": 0, "synchronized_dumps": 0,
+                "bot_activity": 0, "flipping_networks": 0, "sniper_attacks": 0,
+            },
+        }
+        OUT.write_text(json.dumps(result, indent=2))
+        with open(OUT_JSONL, "w") as f:
+            for p in final_list:
+                f.write(json.dumps(p) + "\n")
+        print(f"Yazıldı: {OUT} ve {OUT_JSONL} (henüz mature havuz yok)")
+        return
     
     total_rug = sum(1 for r in inc if r.get("rug_24h"))
     total_trusted = sum(1 for r in inc if r.get("is_trusted"))
@@ -425,7 +469,7 @@ async def main():
     
     result = {
         "schema": 6,
-        "rules_version": "v0.6.1-cumulative",
+        "rules_version": "v0.6.2-cumulative",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": LOOKBACK_HOURS,
         "overall": rate_block(total_rug, len(inc)),

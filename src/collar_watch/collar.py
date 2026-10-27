@@ -18,7 +18,7 @@ COLLAR_KEY = os.getenv("COLLAR_API_KEY", "").strip()
 DELAY_SEC = float(os.getenv("DELAY_SEC", "180"))
 TIMEOUT_SEC = float(os.getenv("TIMEOUT_SEC", "30"))
 REQ_PER_MIN = float(os.getenv("REQ_PER_MIN", "8"))
-CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))
+CONCURRENCY = int(os.getenv("CONCURRENCY", "3"))
 LIMIT = int(os.getenv("LIMIT", "0"))
 
 POOL_INTERVAL_SEC = 1.2 * 2 * 60.0 / REQ_PER_MIN

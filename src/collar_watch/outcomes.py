@@ -1,16 +1,24 @@
-"""outcomes.py - v0.2 rug etiketi: LP çekilmesi + Fiyat Çöküşü + Ölü Havuz Analizi.
+"""outcomes.py - v0.4.1 (Robinhood Chain USDG Odaklı, Gelişmiş Adli Analiz - Düzeltilmiş)
 
-RUG TANIMI (v0.2, yalnızca zincirden, Collar'dan BAĞIMSIZ):
-  1. LP Pull: Toplam likidite, 24sa içinde tepe noktasından %90+ düşerse.
-  2. Price Crash: Token fiyatı, 24sa içinde %95+ düşerse.
-  3. Dead Pool: Havuzda 24sa içinde HİÇ Swap (alım-satım) işlemi olmazsa.
+Rug Tanımı (Zincirden, Collar'dan BAĞIMSIZ):
+  1. LP Pull: Toplam likidite 24sa içinde tepeden %90+ düşerse.
+  2. Price Crash: Token fiyatı (USDG paritesi) 24sa içinde tepeden %95+ düşerse.
+
+Gelişmiş Anomali Tespiti (Al-Sat Davranışları):
+  3. Honeypot: İşlem var ama satış yok.
+  4. Wash Trading: Az sayıda cüzdan arasında yüksek işlem hacmi.
+  5. Synchronized Dump: Aynı blokta 5+ farklı cüzdandan satış (Sybil ağı).
+  6. Bot Activity: İşlemlerin %40'ı aynı ham miktarda (botlar aynı miktarla işlem yapıyor).
+  7. Flipping Network: Alıcıların %50'si daha sonra satış yapmış (fiyat manipülasyonu).
+  8. Sniper: İlk 2 blokta 3'ten fazla işlem.
+
+Güvenilir Token (Trusted):
+  Hiçbir anomali yok, LP çekilmemiş ve fiyat çökmemişse "trusted" olarak raporlanır.
 
 Env:
-  POOL_MANAGER (zorunlu), RPC_URL, SOURCES (backfill,live), LIVE_EVENTS,
-  BACKFILL_EVENTS, EVALUATIONS (opsiyonel), OUTCOMES_OUT, OUTCOMES_OUT_JSONL,
-  QUOTE_ADDRS, HOOK_LABELS, LP_PULL_THRESHOLD (0.90), LP_WINDOW_SEC (86400),
-  START_RANGE (10000), MIN_RANGE (200), RPC_RPS (5), MIN_PEAK_LIQ (0),
-  MODIFY_LIQ_TOPIC, SWAP_TOPIC
+  POOL_MANAGER (zorunlu), RPC_URL, SOURCES, LIVE_EVENTS, BACKFILL_EVENTS,
+  EVALUATIONS, OUTCOMES_OUT, OUTCOMES_OUT_JSONL, QUOTE_ADDRS, HOOK_LABELS,
+  LP_PULL_THRESHOLD (0.90), PRICE_CRASH_THRESHOLD (0.95), LP_WINDOW_SEC (86400).
 """
 import asyncio
 import json
@@ -24,6 +32,7 @@ from pathlib import Path
 
 import httpx
 
+# --- Yapılandırma ---
 RPC_URL = os.getenv("RPC_URL", "https://rpc.mainnet.chain.robinhood.com")
 POOL_MANAGER = os.getenv("POOL_MANAGER", "").strip().lower()
 SOURCES = [s.strip() for s in os.getenv("SOURCES", "backfill,live").split(",") if s.strip()]
@@ -39,17 +48,17 @@ LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
 START_RANGE = int(os.getenv("START_RANGE", "10000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
 RPC_RPS = float(os.getenv("RPC_RPS", "5"))
-MIN_PEAK_LIQ = float(os.getenv("MIN_PEAK_LIQ", "0"))
 
-MODIFY_LIQ_TOPIC = os.getenv("MODIFY_LIQ_TOPIC", "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec").strip().lower()
-SWAP_TOPIC = os.getenv("SWAP_TOPIC", "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8").strip().lower()
+# Uniswap V4 Event Topic'leri (Tam keccak256 hash değerleri ile düzeltildi)
+MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
+SWAP_TOPIC = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115f96b2db"
+
+# USDG (6 decimals) - Robinhood Chain resmi kontrat adresi
+USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
 
 DEFAULT_QUOTES = (
-    "0x5fc5360d0400a0fd4f2af552add042d716f1d168,"
-    "0x0bd7d308f8e1639fab988df18a8011f41eacad73,"
-    "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea,"
-    "0x999999990237e901c537bbd768e09562be02efa5,"
-    "0x0000000000000000000000000000000000000000"
+    f"{USDG_ADDRESS},"
+    "0x0000000000000000000000000000000000000000"  # Native ETH (varsa)
 )
 QUOTES = {a.strip().lower() for a in (os.getenv("QUOTE_ADDRS") or DEFAULT_QUOTES).split(",") if a.strip()}
 
@@ -59,10 +68,7 @@ for _pair in os.getenv("HOOK_LABELS", "").split(","):
         _a, _n = _pair.split(":", 1)
         HOOK_LABELS[_a.strip().lower()] = _n.strip()
 
-BEFORE_ADD_LIQ = 1 << 11
-BEFORE_REMOVE_LIQ = 1 << 9
-AFTER_REMOVE_LIQ_RETURNS_DELTA = 1 << 0
-
+# --- RPC Yardımcıları ---
 class RangeError(RuntimeError):
     pass
 
@@ -95,6 +101,7 @@ async def rpc(client: httpx.AsyncClient, method: str, params: list, retries: int
             await asyncio.sleep(2.0 * (a + 1))
     raise RuntimeError(f"rpc {method} başarısız: {last}")
 
+# --- Veri Yükleme ---
 def _jsonl(path: Path):
     if not path.exists(): return
     with open(path) as f:
@@ -168,29 +175,34 @@ def attach_collar_sell_sim(pools: list[dict]):
     for p in pools:
         if "collar_sell_sim_ok" not in p and p["pool_id"] in ev: p["collar_sell_sim_ok"] = ev[p["pool_id"]]
 
+# --- Log Çözücüler (Uniswap V4) ---
 def decode_modify_liquidity(lg: dict) -> tuple[str, int, str] | None:
     topics = lg.get("topics", [])
     if len(topics) < 3: return None
     data = lg["data"][2:]
-    w = [data[i * 64:(i + 1) * 64] for i in range(len(data) // 64)]
-    if len(w) < 4: return None
-    v = int(w[2], 16)
+    if len(data) < 192: return None
+    delta_hex = data[128:192]
+    v = int(delta_hex, 16)
     delta = v - (1 << 256) if v >= (1 << 255) else v
-    return topics[1].lower(), delta, "0x" + topics[2][-40:].lower()
+    sender = "0x" + topics[2][-40:].lower()
+    return topics[1].lower(), delta, sender
 
-def decode_swap(lg: dict) -> tuple[str, float] | None:
+def decode_swap(lg: dict) -> tuple[str, str, int, int, float] | None:
     topics = lg.get("topics", [])
-    if len(topics) < 2: return None
+    if len(topics) < 3: return None
     data = lg["data"][2:]
-    w = [data[i * 64:(i + 1) * 64] for i in range(len(data) // 64)]
-    if len(w) < 3: return None
-    sqrt_price = int(w[2], 16)
-    return topics[1].lower(), float(sqrt_price)
+    if len(data) < 192: return None
+    amt0 = int(data[0:64], 16)
+    if amt0 >= (1 << 255): amt0 -= (1 << 256)
+    amt1 = int(data[64:128], 16)
+    if amt1 >= (1 << 255): amt1 -= (1 << 256)
+    sqrt_price = int(data[128:192], 16)
+    sender = "0x" + topics[2][-40:].lower()
+    return topics[1].lower(), sender, amt0, amt1, float(sqrt_price)
 
 async def scan_chain(client: httpx.AsyncClient, from_block: int, to_block: int):
-    liq_series: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
-    swap_series: dict[str, list[tuple[int, float]]] = defaultdict(list)
-    
+    liq_series = defaultdict(list)
+    swap_series = defaultdict(list)
     size, cap, frm, ok_streak, calls = START_RANGE, START_RANGE, from_block, 0, 0
     t0 = time.time()
     while frm <= to_block:
@@ -213,8 +225,7 @@ async def scan_chain(client: httpx.AsyncClient, from_block: int, to_block: int):
                 if d: liq_series[d[0]].append((int(lg["blockNumber"], 16), d[1], d[2]))
             elif topic0 == SWAP_TOPIC:
                 d = decode_swap(lg)
-                if d: swap_series[d[0]].append((int(lg["blockNumber"], 16), d[1]))
-        
+                if d: swap_series[d[0]].append((int(lg["blockNumber"], 16), d[1], d[2], d[3], d[4]))
         frm = to + 1
         ok_streak += 1
         if ok_streak >= 15 and cap < START_RANGE:
@@ -222,7 +233,6 @@ async def scan_chain(client: httpx.AsyncClient, from_block: int, to_block: int):
             size, ok_streak = cap, 0
         if calls % 20 == 0:
             print(f"  tarama %{(frm - from_block) / max(1, to_block - from_block + 1) * 100:.0f} | çağrı={calls} | likidite={len(liq_series)} | swap={len(swap_series)}", flush=True)
-            
     for pid in liq_series: liq_series[pid].sort(key=lambda x: x[0])
     for pid in swap_series: swap_series[pid].sort(key=lambda x: x[0])
     print(f"tarama bitti: {calls} çağrı, likidite={len(liq_series)}, swap={len(swap_series)}, {int(time.time() - t0)}s")
@@ -235,58 +245,102 @@ async def blocks_per_sec(client: httpx.AsyncClient, from_block: int, head: int) 
     if dt <= 0 or head <= from_block: raise RuntimeError("blok hızı hesaplanamadı")
     return (head - from_block) / dt
 
+# --- Gelişmiş Analiz ---
 def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_blocks: int, token_is_c0: bool) -> dict:
     end = init_block + window_blocks
-    cum = peak = 0
-    max_dd = 0.0
-    n_add = n_rem = 0
-    senders: Counter = Counter()
     
+    cum = peak_liq = 0
+    max_dd_liq = 0.0
+    n_add = n_rem = 0
     for blk, delta, sender in liq_events:
         if blk < init_block: continue
         if blk > end: break
         cum += delta
-        if delta > 0:
-            n_add += 1
-            senders[sender] += 1
-        elif delta < 0:
-            n_rem += 1
-        if cum > peak: peak = cum
-        elif peak > 0: max_dd = max(max_dd, min(1.0, 1.0 - cum / peak))
+        if delta > 0: n_add += 1
+        elif delta < 0: n_rem += 1
+        if cum > peak_liq: peak_liq = cum
+        elif peak_liq > 0: max_dd_liq = max(max_dd_liq, min(1.0, 1.0 - cum / peak_liq))
         
     swap_count = 0
-    first_price = None
-    last_price = None
-    price_crash = False
-    price_ratio = 1.0  # NameError'ı önlemek için başlangıç değeri
+    buy_count = 0
+    sell_count = 0
+    unique_traders = set()
+    buyer_wallets = set()
+    seller_wallets = set()
+    peak_price = 0.0
+    max_price_dd = 0.0
+    early_snipers = 0
+    sells_by_block = Counter()
+    trade_amounts = Counter()
     
-    for blk, sqrt_price in swap_events:
+    for i, (blk, sender, amt0, amt1, sqrt_price) in enumerate(swap_events):
         if blk < init_block: continue
         if blk > end: break
         swap_count += 1
-        if first_price is None: first_price = sqrt_price
-        last_price = sqrt_price
+        unique_traders.add(sender)
         
-    if first_price and first_price > 0 and last_price is not None:
-        # sqrtPriceX96 -> Fiyat = (sqrtPrice / 2^96)^2
-        price_ratio = (last_price / first_price) ** 2
-        
-        # Token0 ve Token1 yönünü düzelt
-        if not token_is_c0:
-            price_ratio = 1.0 / price_ratio
+        if blk <= init_block + 2: early_snipers += 1
             
-        price_drop = 1.0 - price_ratio
-        if price_drop >= PRICE_CRASH_THRESHOLD:
-            price_crash = True
+        target_amt = amt0 if token_is_c0 else amt1
+        trade_size = abs(target_amt)
+        
+        if target_amt > 0: 
+            sell_count += 1
+            seller_wallets.add(sender)
+            sells_by_block[blk] += 1
+        elif target_amt < 0: 
+            buy_count += 1
+            buyer_wallets.add(sender)
+            
+        if trade_size > 0: trade_amounts[trade_size] += 1
+            
+        price_c0 = (sqrt_price / (2**96)) ** 2
+        current_price = price_c0 if token_is_c0 else (1.0 / price_c0 if price_c0 > 0 else 0)
+        
+        if current_price > peak_price: peak_price = current_price
+        elif peak_price > 0:
+            dd = 1.0 - (current_price / peak_price)
+            if dd > max_price_dd: max_price_dd = dd
 
-    return {"peak": peak, "max_drawdown": max_dd, "n_add": n_add, "n_remove": n_rem, "senders": senders,
-            "swap_count": swap_count, "price_crash": price_crash, "price_drop_pct": round((1.0 - price_ratio)*100, 1) if first_price and last_price else 0.0}
+    price_crash = max_price_dd >= PRICE_CRASH_THRESHOLD
 
-def hook_flags(hook_addr: str) -> dict:
-    try: v = int(hook_addr, 16)
-    except: return {"has_hook": False}
-    if v == 0: return {"has_hook": False}
-    return {"has_hook": True, "before_add_liquidity": bool(v & BEFORE_ADD_LIQ), "before_remove_liquidity": bool(v & BEFORE_REMOVE_LIQ), "after_remove_returns_delta": bool(v & AFTER_REMOVE_LIQ_RETURNS_DELTA)}
+    is_honeypot = swap_count > 5 and sell_count == 0
+    is_wash_trade = swap_count > 10 and len(unique_traders) <= 3
+    
+    max_sells = max(sells_by_block.values()) if sells_by_block else 0
+    is_synchronized_dump = max_sells >= 5
+    
+    is_bot_activity = False
+    if swap_count > 10 and trade_amounts:
+        most_common_amt, count = trade_amounts.most_common(1)[0]
+        if count / swap_count > 0.40: is_bot_activity = True
+            
+    flippers = buyer_wallets.intersection(seller_wallets)
+    is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
+
+    is_trusted = (
+        not price_crash and 
+        max_dd_liq < LP_PULL_THRESHOLD and 
+        not is_honeypot and 
+        not is_wash_trade and 
+        not is_synchronized_dump and 
+        not is_bot_activity and 
+        not is_flipping_network and
+        early_snipers <= 3
+    )
+
+    return {
+        "peak_liq": peak_liq, 
+        "max_drawdown_liq": max_dd_liq, 
+        "n_add": n_add, "n_remove": n_rem,
+        "swap_count": swap_count, "buy_count": buy_count, "sell_count": sell_count,
+        "unique_traders": len(unique_traders),
+        "price_crash": price_crash, "max_price_dd_pct": round(max_price_dd * 100, 1),
+        "is_honeypot": is_honeypot, "is_wash_trade": is_wash_trade,
+        "is_synchronized_dump": is_synchronized_dump, "is_bot_activity": is_bot_activity,
+        "is_flipping_network": is_flipping_network, "early_snipers": early_snipers,
+        "is_trusted": is_trusted
+    }
 
 def wilson_ci(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     if n == 0: return (0.0, 1.0)
@@ -299,10 +353,7 @@ def rate_block(k: int, n: int) -> dict:
     lo, hi = wilson_ci(k, n)
     return {"n": n, "rug": k, "rate": round(k / n, 4) if n else None, "ci95": [round(lo, 4), round(hi, 4)]}
 
-def quantile(sorted_vals: list[float], q: float) -> float:
-    if not sorted_vals: return 0.0
-    return sorted_vals[min(len(sorted_vals) - 1, int(q * len(sorted_vals)))]
-
+# --- Ana Fonksiyon ---
 async def main():
     if not POOL_MANAGER:
         print("HATA: POOL_MANAGER gerekli.", file=sys.stderr); sys.exit(1)
@@ -318,41 +369,35 @@ async def main():
         window_blocks = int(LP_WINDOW_SEC * bps)
         to_block = min(head, max(p["block"] for p in pools) + window_blocks)
         print(f"blok aralığı {from_block} -> {to_block} | pencere ≈ {window_blocks:,} blok")
-        
         liq_series, swap_series = await scan_chain(client, from_block, to_block)
 
     per_pool, excl = [], Counter()
-    hook_act = defaultdict(lambda: {"pools": 0, "with_add": 0, "with_remove": 0, "senders": Counter(), "addr": None})
-
     for p in pools:
         pid = p["pool_id"]
         a = analyze_pool(liq_series.get(pid, []), swap_series.get(pid, []), p["block"], window_blocks, p.get("token_is_c0", False))
-
-        h = hook_act[p["hook"]]
-        h["pools"] += 1
-        h["addr"] = h["addr"] or p.get("hook_addr")
-        if a["n_add"]: h["with_add"] += 1; h["senders"].update(a["senders"])
-        if a["n_remove"]: h["with_remove"] += 1
-
+        
         mature = p["block"] + window_blocks <= head
         if not mature: status = "immature"
         elif a["n_add"] == 0: status = "no_liquidity_events"
-        elif a["peak"] < MIN_PEAK_LIQ: status = "below_min_peak"
         else: status = "included"
         excl[status] += 1
 
-        is_lp_pull = status == "included" and a["max_drawdown"] >= LP_PULL_THRESHOLD
+        is_lp_pull = status == "included" and a["max_drawdown_liq"] >= LP_PULL_THRESHOLD
         is_price_crash = status == "included" and a["price_crash"]
         is_dead_pool = status == "included" and a["swap_count"] == 0
-        
-        rug = is_lp_pull or is_price_crash 
+        rug = is_lp_pull or is_price_crash
 
         per_pool.append({
             "pool_id": pid, "token": p["token"], "hook": p["hook"], "block": p["block"],
-            "source": p["source"], "status": status, "peak_liq": float(a["peak"]),
-            "max_drawdown_pct": round(a["max_drawdown"] * 100, 1),
-            "swap_count": a["swap_count"], "price_crash": is_price_crash, "price_drop_pct": a["price_drop_pct"],
-            "is_lp_pull": is_lp_pull, "is_dead_pool": is_dead_pool, "rug": rug,
+            "source": p["source"], "status": status, "peak_liq": float(a["peak_liq"]),
+            "max_drawdown_pct": round(a["max_drawdown_liq"] * 100, 1),
+            "swap_count": a["swap_count"], "buy_count": a["buy_count"], "sell_count": a["sell_count"],
+            "unique_traders": a["unique_traders"], "price_crash": is_price_crash,
+            "price_drop_pct": a["max_price_dd_pct"], "is_honeypot": a["is_honeypot"],
+            "is_wash_trade": a["is_wash_trade"], "is_synchronized_dump": a["is_synchronized_dump"],
+            "is_bot_activity": a["is_bot_activity"], "is_flipping_network": a["is_flipping_network"],
+            "early_snipers": a["early_snipers"], "is_lp_pull": is_lp_pull,
+            "is_dead_pool": is_dead_pool, "rug": rug, "is_trusted": a["is_trusted"],
             "collar_t0": p.get("collar_t0"), "collar_sell_sim_ok": p.get("collar_sell_sim_ok"),
         })
 
@@ -360,49 +405,33 @@ async def main():
     if not inc:
         print("HATA: payda boş (olgun + likiditeli havuz yok).", file=sys.stderr); sys.exit(1)
 
-    by_source = {s: rate_block(sum(r["rug"] for r in rs), len(rs)) for s in {r["source"] for r in inc} for rs in [[r for r in inc if r["source"] == s]]}
-    by_hook = []
-    for hook in sorted({r["hook"] for r in inc}, key=lambda h: -sum(1 for r in inc if r["hook"] == h)):
-        rs = [r for r in inc if r["hook"] == hook]
-        by_hook.append({"hook": hook, **rate_block(sum(r["rug"] for r in rs), len(rs))})
-
-    peaks = sorted(r["peak_liq"] for r in inc)
-    sensitivity = []
-    for q in (0.0, 0.10, 0.25, 0.50):
-        thr = quantile(peaks, q)
-        rs = [r for r in inc if r["peak_liq"] >= thr]
-        sensitivity.append({"peak_quantile": q, "min_peak_liq": thr, **rate_block(sum(r["rug"] for r in rs), len(rs))})
-
-    lp_activity = []
-    for hook, h in sorted(hook_act.items(), key=lambda kv: -kv[1]["pools"]):
-        lp_activity.append({
-            "hook": hook, "hook_addr": h["addr"], "pools": h["pools"],
-            "pools_with_add": h["with_add"], "pools_with_remove": h["with_remove"],
-            "remove_share_of_funded": round(h["with_remove"] / h["with_add"], 4) if h["with_add"] else None,
-            "top_add_senders": h["senders"].most_common(3), **hook_flags(h["addr"] or ""),
-        })
-
     total_rug = sum(r["rug"] for r in inc)
+    total_trusted = sum(1 for r in inc if r["is_trusted"])
+    
+    anomalies_summary = {
+        "honeypots": sum(1 for r in inc if r["is_honeypot"]),
+        "wash_trading": sum(1 for r in inc if r["is_wash_trade"]),
+        "synchronized_dumps": sum(1 for r in inc if r["is_synchronized_dump"]),
+        "bot_activity": sum(1 for r in inc if r["is_bot_activity"]),
+        "flipping_networks": sum(1 for r in inc if r["is_flipping_network"]),
+        "sniper_attacks": sum(1 for r in inc if r["early_snipers"] > 3)
+    }
+
     result = {
-        "schema": 3,
-        "rules_version": "v0.2-multi-metric",
+        "schema": 4,
+        "rules_version": "v0.4-usdg-forensics",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "rug_definition": {
             "label": "multi_metric_rug",
             "window_sec": LP_WINDOW_SEC,
             "lp_pull_threshold_pct": int(LP_PULL_THRESHOLD * 100),
             "price_crash_threshold_pct": int(PRICE_CRASH_THRESHOLD * 100),
-            "note": "LP Pull VEYA Fiyat Çöküşü (>%95) rug olarak sayılır. Collar çıktısı etikete girmez. Ölü havuzlar (0 Swap) raporlanır ama rug sayılmaz.",
+            "note": "LP Pull VEYA Fiyat Çöküşü (>%95) rug sayılır. Trusted: Hiçbir anomali yok.",
         },
         "overall": rate_block(total_rug, len(inc)),
+        "trusted_tokens": {"n": total_trusted, "total": len(inc)},
         "dead_pools": {"n": sum(1 for r in inc if r["is_dead_pool"]), "total": len(inc)},
-        "by_source": by_source, "by_hook": by_hook, "exclusions": dict(excl),
-        "peak_sensitivity": sensitivity, "hook_lp_activity": lp_activity,
-        "caveats": [
-            "Likidite birimi (L) fiyat aralığına bağlıdır; USD değeri değildir.",
-            "Fiyat düşüşü (sqrtPriceX96) üzerinden hesaplanır, MEV ve arbitraj etkilerini içerebilir.",
-            "Sahibin likiditeyi başka havuza taşıması (migrasyon) LP Pull gibi görünebilir.",
-        ],
+        "anomalies_summary": anomalies_summary,
         "per_pool": per_pool,
     }
     
@@ -413,17 +442,21 @@ async def main():
             f.write(json.dumps({
                 "token": p["token"], "rug_24h": p["rug"], "status": p["status"],
                 "is_lp_pull": p["is_lp_pull"], "is_price_crash": p["price_crash"],
-                "is_dead_pool": p["is_dead_pool"], "swap_count": p["swap_count"],
+                "is_dead_pool": p["is_dead_pool"], "is_trusted": p["is_trusted"],
+                "swap_count": p["swap_count"], "unique_traders": p["unique_traders"],
+                "is_honeypot": p["is_honeypot"], "is_wash_trade": p["is_wash_trade"],
+                "is_synchronized_dump": p["is_synchronized_dump"],
+                "is_bot_activity": p["is_bot_activity"], "is_flipping_network": p["is_flipping_network"],
                 "max_drawdown_pct": p["max_drawdown_pct"], "price_drop_pct": p["price_drop_pct"],
                 "pool_id": p["pool_id"]
             }) + "\n")
 
-    o = result["overall"]
-    print("\n=== SONUÇ ===")
-    print(f"payda={o['n']}  rug={o['rug']}  oran={o['rate']}  CI95={o['ci95']}")
-    print(f"Ölü Havuz (0 Swap): {result['dead_pools']['n']} / {result['dead_pools']['total']}")
-    print(f"dışarıda: {dict(excl)}")
-    print(f"\nyazıldı: {OUT} ve {OUT_JSONL}")
+    print(f"\n=== SONUÇ (USDG Paritesi) ===")
+    print(f"Değerlendirilen: {len(inc)} | Rug: {total_rug} | Trusted: {total_trusted}")
+    print(f"Anomaliler: Honeypot={anomalies_summary['honeypots']}, WashTrade={anomalies_summary['wash_trading']}, "
+          f"Senkron={anomalies_summary['synchronized_dumps']}, Bot={anomalies_summary['bot_activity']}, "
+          f"Flipping={anomalies_summary['flipping_networks']}, Sniper={anomalies_summary['sniper_attacks']}")
+    print(f"yazıldı: {OUT} ve {OUT_JSONL}")
 
 if __name__ == "__main__":
     asyncio.run(main())

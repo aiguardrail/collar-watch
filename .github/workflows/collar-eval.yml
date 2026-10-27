@@ -21,7 +21,7 @@ on:
         default: "1"
 
   schedule:
-    # HER GÜN UTC 00:00'da çalış (saatiyle sabah 03:00)
+    # New York saatiyle 03:00 (Kış saati: UTC 08:00)
     - cron: '0 8 * * *' 
 
 permissions:
@@ -80,12 +80,15 @@ jobs:
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
           PY
 
-      # 1. GEÇMİŞ VERİYİ YÜKLE (24 SAATLİK ANALİZ İÇİN HAYATİ)
+      # 1. GEÇMİŞ VERİYİ YÜKLE (24 SAATLİK ANALİZ İÇİN)
       - name: Fetch historical data (for 24h outcomes)
+        env:
+          DATA_DIR: publish-data
+          DATA_BRANCH: live-data
         run: |
           source .github/scripts/databranch.sh
           setup_data_branch
-          # Geçmiş evaluations ve events dosyalarını live-data'dan al
+          
           if [ -f "$DATA_DIR/evaluations.jsonl" ]; then
             cp "$DATA_DIR/evaluations.jsonl" .
             echo "Geçmiş değerlendirmeler yüklendi."
@@ -95,6 +98,10 @@ jobs:
             cp "$DATA_DIR/events.jsonl" data/
             echo "Geçmiş havuz verileri yüklendi."
           fi
+          
+          # KRİTİK: Sonraki adım çakışmasın diye worktree'yi temizle
+          git worktree remove "$DATA_DIR" --force || rm -rf "$DATA_DIR"
+          git worktree prune
 
       - name: Collar preflight (erken kontrol)
         env:
@@ -148,7 +155,7 @@ jobs:
             exit 1
           fi
 
-      # 2. COLLAR DEĞERLENDİRMESİ (Bugünkü kararlar)
+      # 2. COLLAR DEĞERLENDİRMESİ
       - name: Evaluate with Collar
         timeout-minutes: 100
         env:
@@ -159,7 +166,6 @@ jobs:
         run: python -m collar_watch.collar
 
       # 3. 24 SAATLİK SONUÇLARI HESAPLA (Geçmiş + Bugün)
-      # Bu adım, geçmiş evaluations.jsonl ile bugünkü havuz olaylarını birleştirir.
       - name: Track 24h Outcomes (LP Pulls + Anomalies)
         timeout-minutes: 15
         env:
@@ -175,7 +181,7 @@ jobs:
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
         run: python -m collar_watch.publish
 
-      # 4. YAYINLAMA (Tüm geçmişi ve bugünü kaydet)
+      # 4. YAYINLAMA (Geçmişi ve bugünü kaydet)
       - name: Push to live-data (public fallback)
         if: success() && fromJSON(inputs.delay_sec || '180') >= 150
         env:
@@ -184,12 +190,19 @@ jobs:
         run: |
           source .github/scripts/databranch.sh
           setup_data_branch
+          
+          # Dosyaları kopyala
           cp scorecard.json "$DATA_DIR/" 2>/dev/null || true
           cp recent.json "$DATA_DIR/" 2>/dev/null || true
           cp outcomes.json "$DATA_DIR/" 2>/dev/null || true
-          cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true  # <-- Geçmişi kaydet!
-          cp data/events.jsonl "$DATA_DIR/" 2>/dev/null || true # <-- Geçmiş havuzları kaydet!
-          commit_push scorecard.json recent.json outcomes.json evaluations.jsonl events.jsonl
+          cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true
+          
+          # events.jsonl 'data' klasöründe, oraya kopyala
+          mkdir -p "$DATA_DIR/data"
+          cp data/events.jsonl "$DATA_DIR/data/" 2>/dev/null || true
+          
+          # Pushla
+          commit_push scorecard.json recent.json outcomes.json evaluations.jsonl data/events.jsonl
           echo "✓ live-data branch'ine push edildi"
 
       - name: Publish to R2

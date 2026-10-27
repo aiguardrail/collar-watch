@@ -39,7 +39,10 @@ jobs:
           HOOK_LABELS: ${{ vars.HOOK_LABELS }}
           SOURCES: ${{ inputs.sources }}
           EVENTS_PATH: ${{ inputs.events_path }}
-          RPC_RPS: "5"
+          RPC_RPS: "1"                    # ← 5 → 1
+          START_RANGE: "10000"            # aynı
+          MIN_RANGE: "500"
+          LOOKBACK_HOURS: "72"            # ← 168 → 72 (yarıya indir = yarı çağrı)
         run: |
           if [ -z "$POOL_MANAGER" ]; then
             echo "::error::Repo variable POOL_MANAGER tanımlı değil."

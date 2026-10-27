@@ -29,7 +29,7 @@ START_RANGE = int(os.getenv("START_RANGE", "10000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "500"))
 RPC_RPS = float(os.getenv("RPC_RPS", "2"))  # Düşürüldü (5 -> 2)
 
-# Uniswap V4 Event Topic'leri (DÜZELTİLDİ: Swap = V4 hash)
+# Uniswap V4 Event Topic'leri
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
 SWAP_TOPIC = "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8"
 
@@ -70,7 +70,6 @@ async def rpc(client: httpx.AsyncClient, method: str, params: list, retries: int
             r = await client.post(RPC_URL, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
             if r.status_code == 429 or r.status_code >= 500:
                 last = f"HTTP {r.status_code}"
-                # Retry-After varsa saygı duy, yoksa exponential backoff + jitter
                 try:
                     wait = float(r.headers.get("retry-after", 0))
                 except (ValueError, TypeError):
@@ -271,8 +270,14 @@ def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_bl
             buy_count += 1
             buyer_wallets.add(sender)
         if trade_size > 0: trade_amounts[trade_size] += 1
-        price_c0 = (sqrt_price / (2**96)) ** 2
-        current_price = price_c0 if token_is_c0 else (1.0 / price_c0 if price_c0 > 0 else 0)
+        
+        # Fiyat hesabı
+        price_ratio_c0 = (sqrt_price / (2**96)) ** 2
+        if token_is_c0:
+            current_price = price_ratio_c0
+        else:
+            current_price = (1.0 / price_ratio_c0) if price_ratio_c0 > 0 else 0.0
+
         if current_price > peak_price: peak_price = current_price
         elif peak_price > 0:
             dd = 1.0 - (current_price / peak_price)

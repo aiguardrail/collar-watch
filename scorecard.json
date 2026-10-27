@@ -1,19 +1,19 @@
 {
   "schema": 1,
   "rules_version": "v0",
-  "generated_at": "2026-10-27T05:50:47.979895+00:00",
+  "generated_at": "2026-10-27T15:56:09.757233+00:00",
   "window_hours": 48,
   "metric_type": "decision_stability",
   "sample": {
-    "evaluated": 119,
-    "n_complete": 119,
-    "total_pools_in_window": 139,
-    "sample_rate": 0.8561
+    "evaluated": 120,
+    "n_complete": 120,
+    "total_pools_in_window": 141,
+    "sample_rate": 0.8511
   },
   "t0": {
     "counts": {
-      "ALLOW": 117,
-      "WARN": 2,
+      "ALLOW": 116,
+      "WARN": 4,
       "DENY": 0,
       "ERROR": 0,
       "UNKNOWN": 0
@@ -21,30 +21,30 @@
   },
   "t3m": {
     "counts": {
-      "ALLOW": 117,
-      "WARN": 2,
+      "ALLOW": 116,
+      "WARN": 4,
       "DENY": 0,
       "ERROR": 0,
       "UNKNOWN": 0
     }
   },
   "transitions": {
-    "ALLOW\u2192ALLOW": 117,
-    "WARN\u2192WARN": 2
+    "ALLOW\u2192ALLOW": 116,
+    "WARN\u2192WARN": 4
   },
   "changes": {
     "total_changed": 0,
     "change_rate": 0.0
   },
   "flip": {
-    "allow_t0_count": 117,
-    "allow_t3m_count": 117,
+    "allow_t0_count": 116,
+    "allow_t3m_count": 116,
     "flipped_out": 0,
     "flipped_in": 0,
     "flip_rate": 0.0,
     "flip_rate_ci95": [
       0.0,
-      0.0318
+      0.0321
     ]
   },
   "deny_breakdown": {
@@ -56,49 +56,45 @@
   "hook_distribution": [
     {
       "hook": "pons_v2",
-      "n": 49
+      "n": 55
     },
     {
       "hook": "none",
-      "n": 42
+      "n": 40
     },
     {
       "hook": "unknown_3",
-      "n": 18
-    },
-    {
-      "hook": "unknown",
-      "n": 5
+      "n": 11
     },
     {
       "hook": "unknown_4",
-      "n": 4
+      "n": 7
     },
     {
-      "hook": "unknown_10",
-      "n": 1
+      "hook": "unknown",
+      "n": 7
     }
   ],
   "risk_factors": [
     {
       "factor": "Ownership not renounced (owner: 0xeb7C0347...)",
-      "n": 44
+      "n": 45
     },
     {
-      "factor": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown",
-      "n": 1
+      "factor": "Sell simulation reverted (balance slot unknown",
+      "n": 3
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0x00000000...)",
+      "n": 2
     },
     {
       "factor": "may be a false positive): ('0xf4d678b8'",
-      "n": 1
+      "n": 2
     },
     {
       "factor": "'0xf4d678b8')",
-      "n": 1
-    },
-    {
-      "factor": "Ownership not renounced (owner: 0x66968bAD...)",
-      "n": 1
+      "n": 2
     },
     {
       "factor": "Ownership not renounced (owner: 0xFd1083CD...)",
@@ -109,15 +105,15 @@
       "n": 1
     },
     {
-      "factor": "Ownership not renounced (owner: 0x76cc7228...)",
+      "factor": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown",
       "n": 1
     },
     {
-      "factor": "Ownership not renounced (owner: 0x1C083F2f...); Owner can call risky functions",
+      "factor": "Ownership not renounced (owner: 0xFF48281D...)",
       "n": 1
     },
     {
-      "factor": "but combination is not strong enough for auto-deny",
+      "factor": "Ownership not renounced (owner: 0xA190368C...)",
       "n": 1
     }
   ],
@@ -125,5 +121,23 @@
     "metric_type": "decision_stability",
     "accuracy_disclaimer": "This measures T+0 vs T+3m decision consistency, not predictive accuracy. T+24h outcome data (did the token actually rug?) will be published separately.",
     "conflict_disclosure": "This bot does not hold or trade any token. Scoring is independent of token ownership. Collar Guardrail has no token."
+  },
+  "outcomes": {
+    "measured": 49,
+    "window": "24h",
+    "method": "liquidity_pulled_within_24h",
+    "as_of": "2026-10-27T15:56:09.757221+00:00",
+    "by_verdict": {
+      "ALLOW": {
+        "n": 48,
+        "rugs": 7,
+        "rate": 0.1458
+      },
+      "WARN": {
+        "n": 1,
+        "rugs": 0,
+        "rate": 0.0
+      }
+    }
   }
 }

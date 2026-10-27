@@ -1,29 +1,9 @@
-"""outcomes.py - v0.4.1 (Robinhood Chain USDG Odaklı, Gelişmiş Adli Analiz - Düzeltilmiş)
-
-Rug Tanımı (Zincirden, Collar'dan BAĞIMSIZ):
-  1. LP Pull: Toplam likidite 24sa içinde tepeden %90+ düşerse.
-  2. Price Crash: Token fiyatı (USDG paritesi) 24sa içinde tepeden %95+ düşerse.
-
-Gelişmiş Anomali Tespiti (Al-Sat Davranışları):
-  3. Honeypot: İşlem var ama satış yok.
-  4. Wash Trading: Az sayıda cüzdan arasında yüksek işlem hacmi.
-  5. Synchronized Dump: Aynı blokta 5+ farklı cüzdandan satış (Sybil ağı).
-  6. Bot Activity: İşlemlerin %40'ı aynı ham miktarda (botlar aynı miktarla işlem yapıyor).
-  7. Flipping Network: Alıcıların %50'si daha sonra satış yapmış (fiyat manipülasyonu).
-  8. Sniper: İlk 2 blokta 3'ten fazla işlem.
-
-Güvenilir Token (Trusted):
-  Hiçbir anomali yok, LP çekilmemiş ve fiyat çökmemişse "trusted" olarak raporlanır.
-
-Env:
-  POOL_MANAGER (zorunlu), RPC_URL, SOURCES, LIVE_EVENTS, BACKFILL_EVENTS,
-  EVALUATIONS, OUTCOMES_OUT, OUTCOMES_OUT_JSONL, QUOTE_ADDRS, HOOK_LABELS,
-  LP_PULL_THRESHOLD (0.90), PRICE_CRASH_THRESHOLD (0.95), LP_WINDOW_SEC (86400).
-"""
+"""outcomes.py - v0.4.2 (Robinhood Chain USDG Odaklı, Gelişmiş Adli Analiz - RPC Fix)"""
 import asyncio
 import json
 import math
 import os
+import random
 import sys
 import time
 from collections import Counter, defaultdict
@@ -46,19 +26,19 @@ LP_PULL_THRESHOLD = float(os.getenv("LP_PULL_THRESHOLD", "0.90"))
 PRICE_CRASH_THRESHOLD = float(os.getenv("PRICE_CRASH_THRESHOLD", "0.95"))
 LP_WINDOW_SEC = float(os.getenv("LP_WINDOW_SEC", "86400"))
 START_RANGE = int(os.getenv("START_RANGE", "10000"))
-MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
-RPC_RPS = float(os.getenv("RPC_RPS", "5"))
+MIN_RANGE = int(os.getenv("MIN_RANGE", "500"))
+RPC_RPS = float(os.getenv("RPC_RPS", "2"))  # Düşürüldü (5 -> 2)
 
-# Uniswap V4 Event Topic'leri (Tam keccak256 hash değerleri ile düzeltildi)
+# Uniswap V4 Event Topic'leri (DÜZELTİLDİ: Swap = V4 hash)
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
-SWAP_TOPIC = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115f96b2db"
+SWAP_TOPIC = "0x40e9cecbdb1f4b7d12a5d6bb2f4c35fd8e1c5f7bdfbd89c2590bf31bc92bd6d8"
 
 # USDG (6 decimals) - Robinhood Chain resmi kontrat adresi
 USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
 
 DEFAULT_QUOTES = (
     f"{USDG_ADDRESS},"
-    "0x0000000000000000000000000000000000000000"  # Native ETH (varsa)
+    "0x0000000000000000000000000000000000000000"
 )
 QUOTES = {a.strip().lower() for a in (os.getenv("QUOTE_ADDRS") or DEFAULT_QUOTES).split(",") if a.strip()}
 
@@ -68,7 +48,6 @@ for _pair in os.getenv("HOOK_LABELS", "").split(","):
         _a, _n = _pair.split(":", 1)
         HOOK_LABELS[_a.strip().lower()] = _n.strip()
 
-# --- RPC Yardımcıları ---
 class RangeError(RuntimeError):
     pass
 
@@ -83,7 +62,7 @@ async def _throttle():
         _rate["next"] = max(now, _rate["next"]) + 1.0 / RPC_RPS
     if wait > 0: await asyncio.sleep(wait)
 
-async def rpc(client: httpx.AsyncClient, method: str, params: list, retries: int = 4):
+async def rpc(client: httpx.AsyncClient, method: str, params: list, retries: int = 6):
     last = None
     for a in range(retries + 1):
         try:
@@ -91,17 +70,26 @@ async def rpc(client: httpx.AsyncClient, method: str, params: list, retries: int
             r = await client.post(RPC_URL, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
             if r.status_code == 429 or r.status_code >= 500:
                 last = f"HTTP {r.status_code}"
-                await asyncio.sleep(2.0 * (a + 1))
+                # Retry-After varsa saygı duy, yoksa exponential backoff + jitter
+                try:
+                    wait = float(r.headers.get("retry-after", 0))
+                except (ValueError, TypeError):
+                    wait = 0
+                if wait <= 0:
+                    wait = (2 ** a) + random.uniform(0, 1)
+                wait = min(wait, 60)
+                print(f"  RPC {method} HTTP {r.status_code} → {wait:.1f}s bekleniyor (deneme {a+1}/{retries})", file=sys.stderr)
+                await asyncio.sleep(wait)
                 continue
             d = r.json()
-            if "error" in d: raise RangeError(f"{method}: {str(d['error'])[:200]}")
+            if "error" in d:
+                raise RangeError(f"{method}: {str(d['error'])[:200]}")
             return d["result"]
         except (httpx.TransportError, ValueError) as e:
             last = f"{type(e).__name__}: {e}"
             await asyncio.sleep(2.0 * (a + 1))
     raise RuntimeError(f"rpc {method} başarısız: {last}")
 
-# --- Veri Yükleme ---
 def _jsonl(path: Path):
     if not path.exists(): return
     with open(path) as f:
@@ -120,24 +108,16 @@ def load_backfill_pools() -> list[dict]:
     for r in _jsonl(BACKFILL_EVENTS):
         c0 = (r.get("currency0") or "").lower()
         c1 = (r.get("currency1") or "").lower()
-        
         token_is_c0 = False
-        if c0 in QUOTES and c1 not in QUOTES: 
-            token = c1
-        elif c1 in QUOTES and c0 not in QUOTES: 
-            token = c0
-            token_is_c0 = True
-        else: 
-            continue
-            
+        if c0 in QUOTES and c1 not in QUOTES: token = c1
+        elif c1 in QUOTES and c0 not in QUOTES: token = c0; token_is_c0 = True
+        else: continue
         pid = (r.get("pool_id") or "").lower()
         if not pid or r.get("block") is None: continue
         hook_addr = (r.get("hooks") or "").lower()
-        out.append({
-            "pool_id": pid, "token": token, "token_is_c0": token_is_c0,
-            "hook_addr": hook_addr, "hook": hook_label(hook_addr), 
-            "block": int(r["block"]), "source": "backfill"
-        })
+        out.append({"pool_id": pid, "token": token, "token_is_c0": token_is_c0,
+                    "hook_addr": hook_addr, "hook": hook_label(hook_addr), 
+                    "block": int(r["block"]), "source": "backfill"})
     return out
 
 def load_live_pools() -> list[dict]:
@@ -148,11 +128,9 @@ def load_live_pools() -> list[dict]:
         st = pools.setdefault(pid, {})
         if r.get("stage") == "init":
             hook_addr = (r.get("hook_addr") or "").lower()
-            st.update({
-                "pool_id": pid, "token": r.get("token"), "token_is_c0": r.get("token_is_c0", False),
-                "hook_addr": hook_addr, "hook": r.get("hook") or hook_label(hook_addr), 
-                "block": r.get("block"), "source": "live"
-            })
+            st.update({"pool_id": pid, "token": r.get("token"), "token_is_c0": r.get("token_is_c0", False),
+                       "hook_addr": hook_addr, "hook": r.get("hook") or hook_label(hook_addr), 
+                       "block": r.get("block"), "source": "live"})
         elif r.get("stage") == "t0":
             st["collar_t0"] = (r.get("result") or {}).get("decision")
             st["collar_sell_sim_ok"] = (r.get("result") or {}).get("sell_simulation_ok")
@@ -175,7 +153,6 @@ def attach_collar_sell_sim(pools: list[dict]):
     for p in pools:
         if "collar_sell_sim_ok" not in p and p["pool_id"] in ev: p["collar_sell_sim_ok"] = ev[p["pool_id"]]
 
-# --- Log Çözücüler (Uniswap V4) ---
 def decode_modify_liquidity(lg: dict) -> tuple[str, int, str] | None:
     topics = lg.get("topics", [])
     if len(topics) < 3: return None
@@ -216,7 +193,14 @@ async def scan_chain(client: httpx.AsyncClient, from_block: int, to_block: int):
             if size <= MIN_RANGE: raise RuntimeError(f"getLogs {frm}->{to} en küçük aralıkta başarısız: {e}")
             size = max(MIN_RANGE, size // 2)
             cap, ok_streak = size, 0
+            print(f"  aralık {size}'e düşürüldü ({str(e)[:90]})", file=sys.stderr)
             continue
+        except RuntimeError as e:
+            if "429" in str(e):
+                print(f"  {frm}->{to} için RPC 429, 30s bekleyip tekrar deniyorum", file=sys.stderr)
+                await asyncio.sleep(30)
+                continue
+            raise
         calls += 1
         for lg in logs:
             topic0 = lg["topics"][0].lower()
@@ -245,10 +229,8 @@ async def blocks_per_sec(client: httpx.AsyncClient, from_block: int, head: int) 
     if dt <= 0 or head <= from_block: raise RuntimeError("blok hızı hesaplanamadı")
     return (head - from_block) / dt
 
-# --- Gelişmiş Analiz ---
 def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_blocks: int, token_is_c0: bool) -> dict:
     end = init_block + window_blocks
-    
     cum = peak_liq = 0
     max_dd_liq = 0.0
     n_add = n_rem = 0
@@ -278,12 +260,9 @@ def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_bl
         if blk > end: break
         swap_count += 1
         unique_traders.add(sender)
-        
         if blk <= init_block + 2: early_snipers += 1
-            
         target_amt = amt0 if token_is_c0 else amt1
         trade_size = abs(target_amt)
-        
         if target_amt > 0: 
             sell_count += 1
             seller_wallets.add(sender)
@@ -291,30 +270,23 @@ def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_bl
         elif target_amt < 0: 
             buy_count += 1
             buyer_wallets.add(sender)
-            
         if trade_size > 0: trade_amounts[trade_size] += 1
-            
         price_c0 = (sqrt_price / (2**96)) ** 2
         current_price = price_c0 if token_is_c0 else (1.0 / price_c0 if price_c0 > 0 else 0)
-        
         if current_price > peak_price: peak_price = current_price
         elif peak_price > 0:
             dd = 1.0 - (current_price / peak_price)
             if dd > max_price_dd: max_price_dd = dd
 
     price_crash = max_price_dd >= PRICE_CRASH_THRESHOLD
-
     is_honeypot = swap_count > 5 and sell_count == 0
     is_wash_trade = swap_count > 10 and len(unique_traders) <= 3
-    
     max_sells = max(sells_by_block.values()) if sells_by_block else 0
     is_synchronized_dump = max_sells >= 5
-    
     is_bot_activity = False
     if swap_count > 10 and trade_amounts:
         most_common_amt, count = trade_amounts.most_common(1)[0]
         if count / swap_count > 0.40: is_bot_activity = True
-            
     flippers = buyer_wallets.intersection(seller_wallets)
     is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
 
@@ -328,17 +300,12 @@ def analyze_pool(liq_events: list, swap_events: list, init_block: int, window_bl
         not is_flipping_network and
         early_snipers <= 3
     )
-
     return {
-        "peak_liq": peak_liq, 
-        "max_drawdown_liq": max_dd_liq, 
-        "n_add": n_add, "n_remove": n_rem,
+        "peak_liq": peak_liq, "max_drawdown_liq": max_dd_liq, "n_add": n_add, "n_remove": n_rem,
         "swap_count": swap_count, "buy_count": buy_count, "sell_count": sell_count,
-        "unique_traders": len(unique_traders),
-        "price_crash": price_crash, "max_price_dd_pct": round(max_price_dd * 100, 1),
-        "is_honeypot": is_honeypot, "is_wash_trade": is_wash_trade,
-        "is_synchronized_dump": is_synchronized_dump, "is_bot_activity": is_bot_activity,
-        "is_flipping_network": is_flipping_network, "early_snipers": early_snipers,
+        "unique_traders": len(unique_traders), "price_crash": price_crash, "max_price_dd_pct": round(max_price_dd * 100, 1),
+        "is_honeypot": is_honeypot, "is_wash_trade": is_wash_trade, "is_synchronized_dump": is_synchronized_dump, 
+        "is_bot_activity": is_bot_activity, "is_flipping_network": is_flipping_network, "early_snipers": early_snipers,
         "is_trusted": is_trusted
     }
 
@@ -353,7 +320,6 @@ def rate_block(k: int, n: int) -> dict:
     lo, hi = wilson_ci(k, n)
     return {"n": n, "rug": k, "rate": round(k / n, 4) if n else None, "ci95": [round(lo, 4), round(hi, 4)]}
 
-# --- Ana Fonksiyon ---
 async def main():
     if not POOL_MANAGER:
         print("HATA: POOL_MANAGER gerekli.", file=sys.stderr); sys.exit(1)
@@ -375,7 +341,6 @@ async def main():
     for p in pools:
         pid = p["pool_id"]
         a = analyze_pool(liq_series.get(pid, []), swap_series.get(pid, []), p["block"], window_blocks, p.get("token_is_c0", False))
-        
         mature = p["block"] + window_blocks <= head
         if not mature: status = "immature"
         elif a["n_add"] == 0: status = "no_liquidity_events"
@@ -403,7 +368,7 @@ async def main():
 
     inc = [r for r in per_pool if r["status"] == "included"]
     if not inc:
-        print("HATA: payda boş (olgun + likiditeli havuz yok).", file=sys.stderr); sys.exit(1)
+        print("HATA: payda boş.", file=sys.stderr); sys.exit(1)
 
     total_rug = sum(r["rug"] for r in inc)
     total_trusted = sum(1 for r in inc if r["is_trusted"])
@@ -419,15 +384,9 @@ async def main():
 
     result = {
         "schema": 4,
-        "rules_version": "v0.4-usdg-forensics",
+        "rules_version": "v0.4.2-usdg-forensics",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "rug_definition": {
-            "label": "multi_metric_rug",
-            "window_sec": LP_WINDOW_SEC,
-            "lp_pull_threshold_pct": int(LP_PULL_THRESHOLD * 100),
-            "price_crash_threshold_pct": int(PRICE_CRASH_THRESHOLD * 100),
-            "note": "LP Pull VEYA Fiyat Çöküşü (>%95) rug sayılır. Trusted: Hiçbir anomali yok.",
-        },
+        "rug_definition": {"label": "multi_metric_rug", "window_sec": LP_WINDOW_SEC},
         "overall": rate_block(total_rug, len(inc)),
         "trusted_tokens": {"n": total_trusted, "total": len(inc)},
         "dead_pools": {"n": sum(1 for r in inc if r["is_dead_pool"]), "total": len(inc)},
@@ -436,7 +395,6 @@ async def main():
     }
     
     OUT.write_text(json.dumps(result, indent=2))
-    
     with open(OUT_JSONL, "w") as f:
         for p in per_pool:
             f.write(json.dumps({
@@ -451,12 +409,8 @@ async def main():
                 "pool_id": p["pool_id"]
             }) + "\n")
 
-    print(f"\n=== SONUÇ (USDG Paritesi) ===")
+    print(f"\n=== SONUÇ ===")
     print(f"Değerlendirilen: {len(inc)} | Rug: {total_rug} | Trusted: {total_trusted}")
-    print(f"Anomaliler: Honeypot={anomalies_summary['honeypots']}, WashTrade={anomalies_summary['wash_trading']}, "
-          f"Senkron={anomalies_summary['synchronized_dumps']}, Bot={anomalies_summary['bot_activity']}, "
-          f"Flipping={anomalies_summary['flipping_networks']}, Sniper={anomalies_summary['sniper_attacks']}")
-    print(f"yazıldı: {OUT} ve {OUT_JSONL}")
 
 if __name__ == "__main__":
     asyncio.run(main())

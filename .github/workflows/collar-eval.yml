@@ -78,9 +78,23 @@ jobs:
           if not (0 <= d <= 600): sys.exit("delay_sec 0-600")
           if not (1 <= c <= 3): sys.exit("concurrency 1-3")
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
-          if d < 150:
-              print("::warning::delay_sec < 150: bu koşu 'T+3dk' ölçmez (SMOKE). Yayınlanmayacak.")
           PY
+
+      # 1. GEÇMİŞ VERİYİ YÜKLE (24 SAATLİK ANALİZ İÇİN HAYATİ)
+      - name: Fetch historical data (for 24h outcomes)
+        run: |
+          source .github/scripts/databranch.sh
+          setup_data_branch
+          # Geçmiş evaluations ve events dosyalarını live-data'dan al
+          if [ -f "$DATA_DIR/evaluations.jsonl" ]; then
+            cp "$DATA_DIR/evaluations.jsonl" .
+            echo "Geçmiş değerlendirmeler yüklendi."
+          fi
+          if [ -f "$DATA_DIR/events.jsonl" ]; then
+            mkdir -p data
+            cp "$DATA_DIR/events.jsonl" data/
+            echo "Geçmiş havuz verileri yüklendi."
+          fi
 
       - name: Collar preflight (erken kontrol)
         env:
@@ -125,8 +139,6 @@ jobs:
           zero_count=$(grep -c '"token": "0x0000000000000000000000000000000000000000"' sampled-pools.jsonl || true)
           echo "=== ZERO token sayısı (0 olmalı): $zero_count ==="
           echo ""
-          echo "=== ilk 2 satır ==="
-          head -2 sampled-pools.jsonl
           if [ "$zero_count" -gt 0 ]; then
             echo "::error::$zero_count ZERO token var. Sampler quote/token ayrımı bozuk; Collar'a gitmeden duruyorum."
             exit 1
@@ -135,20 +147,8 @@ jobs:
             echo "::error::sample-meta.json yok. sampler.py toplam havuz sayısını (payda) yazmıyor; sample_rate yanlış çıkar."
             exit 1
           fi
-          echo ""
-          echo "=== sample-meta.json ==="
-          cat sample-meta.json
 
-      # YENİ ADIM: 24 Saatlik Likidite (Rug) Analizi
-      - name: Track 24h Outcomes (LP Pulls)
-        timeout-minutes: 15
-        env:
-          RPC_URL: ${{ env.ROBINHOOD_RPC }}
-          POOL_MANAGER: ${{ env.POOL_MANAGER }}
-          OUTCOMES_OUT: "outcomes.json"
-          OUTCOMES_OUT_JSONL: "outcomes.jsonl"
-        run: python -m collar_watch.outcomes
-
+      # 2. COLLAR DEĞERLENDİRMESİ (Bugünkü kararlar)
       - name: Evaluate with Collar
         timeout-minutes: 100
         env:
@@ -158,12 +158,24 @@ jobs:
           REQ_PER_MIN: "8"
         run: python -m collar_watch.collar
 
+      # 3. 24 SAATLİK SONUÇLARI HESAPLA (Geçmiş + Bugün)
+      # Bu adım, geçmiş evaluations.jsonl ile bugünkü havuz olaylarını birleştirir.
+      - name: Track 24h Outcomes (LP Pulls + Anomalies)
+        timeout-minutes: 15
+        env:
+          RPC_URL: ${{ env.ROBINHOOD_RPC }}
+          POOL_MANAGER: ${{ env.POOL_MANAGER }}
+          OUTCOMES_OUT: "outcomes.json"
+          OUTCOMES_OUT_JSONL: "outcomes.jsonl"
+        run: python -m collar_watch.outcomes
+
       - name: Build UI JSON (sanity gate)
         if: success()
         env:
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
         run: python -m collar_watch.publish
 
+      # 4. YAYINLAMA (Tüm geçmişi ve bugünü kaydet)
       - name: Push to live-data (public fallback)
         if: success() && fromJSON(inputs.delay_sec || '180') >= 150
         env:
@@ -174,8 +186,10 @@ jobs:
           setup_data_branch
           cp scorecard.json "$DATA_DIR/" 2>/dev/null || true
           cp recent.json "$DATA_DIR/" 2>/dev/null || true
-          cp outcomes.json "$DATA_DIR/" 2>/dev/null || true   # <-- OUTCOMES.JSON EKLENDİ
-          commit_push scorecard.json recent.json outcomes.json
+          cp outcomes.json "$DATA_DIR/" 2>/dev/null || true
+          cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true  # <-- Geçmişi kaydet!
+          cp data/events.jsonl "$DATA_DIR/" 2>/dev/null || true # <-- Geçmiş havuzları kaydet!
+          commit_push scorecard.json recent.json outcomes.json evaluations.jsonl events.jsonl
           echo "✓ live-data branch'ine push edildi"
 
       - name: Publish to R2
@@ -197,26 +211,6 @@ jobs:
       - name: Publish atlandı (bilgi)
         if: success() && !(env.HAS_R2 == 'true' && fromJSON(inputs.delay_sec || '180') >= 150)
         run: echo "::notice::R2 yayını atlandı. live-data push yine de çalıştı."
-
-      - name: Show result
-        if: always()
-        run: |
-          {
-            echo "### Collar Eval sonucu"
-            echo ""
-            if [ -f evaluations.jsonl ]; then
-              echo "Değerlendirilen havuz: **$(wc -l < evaluations.jsonl)**"
-            else
-              echo "❌ evaluations.jsonl yok"
-            fi
-            if [ -f outcomes.json ]; then
-              echo ""
-              echo "#### Outcomes (Rug) Özeti"
-              echo '```json'
-              python -c "import json; d=json.load(open('outcomes.json')); print(json.dumps({'overall': d.get('overall'), 'exclusions': d.get('exclusions')}, indent=2))"
-              echo '```'
-            fi
-          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload
         if: always()

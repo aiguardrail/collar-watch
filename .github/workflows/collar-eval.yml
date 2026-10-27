@@ -98,7 +98,6 @@ jobs:
             cp "$DATA_DIR/events.jsonl" data/
             echo "✓ Geçmiş havuz verileri yüklendi."
           fi
-          # YENİ: Geçmiş 24h sonuçlarını yükle
           if [ -f "$DATA_DIR/outcomes.jsonl" ]; then
             cp "$DATA_DIR/outcomes.jsonl" .
             echo "✓ Geçmiş outcomes (kümülatif) yüklendi."
@@ -171,17 +170,20 @@ jobs:
         run: python -m collar_watch.collar
 
       # 3. 24 SAATLİK SONUÇLARI HESAPLA (KÜMÜLATİF + ROLLING WINDOW)
+      # ÖNEMLİ: Timeout 60dk, lookback 24h (168 yerine)
       - name: Track 24h Outcomes (Cumulative)
-        timeout-minutes: 30
+        timeout-minutes: 60
         env:
           RPC_URL: ${{ env.ROBINHOOD_RPC }}
           POOL_MANAGER: ${{ env.POOL_MANAGER }}
           OUTCOMES_OUT: "outcomes.json"
           OUTCOMES_OUT_JSONL: "outcomes.jsonl"
-          RPC_RPS: "2"
-          START_RANGE: "10000"
-          MIN_RANGE: "500"
-          LOOKBACK_HOURS: "168"   # YENİ: sadece son 7 günün bloklarını tara (hızlı kal)
+          RPC_RPS: "3"
+          START_RANGE: "2000"
+          MIN_RANGE: "200"
+          LOOKBACK_HOURS: "24"
+          COOLDOWN_EVERY: "100"
+          COOLDOWN_SEC: "15"
         run: python -m collar_watch.outcomes
 
       - name: Build UI JSON (sanity gate)
@@ -204,14 +206,11 @@ jobs:
           cp recent.json "$DATA_DIR/" 2>/dev/null || true
           cp outcomes.json "$DATA_DIR/" 2>/dev/null || true
           cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true
-          
-          # YENİ: Kümülatif outcomes.jsonl dosyasını pushla
           cp outcomes.jsonl "$DATA_DIR/" 2>/dev/null || true
           
           mkdir -p "$DATA_DIR/data"
           cp data/events.jsonl "$DATA_DIR/data/" 2>/dev/null || true
           
-          # YENİ: commit_push listesine outcomes.jsonl eklendi
           commit_push scorecard.json recent.json outcomes.json evaluations.jsonl outcomes.jsonl data/events.jsonl
           echo "✓ live-data branch'ine push edildi"
 

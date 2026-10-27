@@ -18,7 +18,7 @@ on:
       concurrency:
         description: "Paralel havuz sayısı"
         required: false
-        default: "1"
+        default: "3"  # KRİTİK GÜNCELLEME: 1 yerine 3 (Zaman aşımını önler)
 
   schedule:
     # New York saatiyle 03:00 (Kış saati: UTC 08:00)
@@ -41,7 +41,7 @@ env:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 150 # 24h analizi uzayabileceği için job süresini biraz artırdık (120 -> 150)
+    timeout-minutes: 180 # Tüm işlemlerin rahatça bitmesi için 3 saate çıkarıldı
     env:
       HAS_R2: ${{ secrets.R2_ENDPOINT != '' }}
 
@@ -62,7 +62,7 @@ jobs:
           BACKFILL_HOURS: ${{ inputs.backfill_hours || '48' }}
           SAMPLE_RATE: ${{ inputs.sample_rate || '0.03' }}
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
-          CONCURRENCY: ${{ inputs.concurrency || '1' }}
+          CONCURRENCY: ${{ inputs.concurrency || '3' }} # Güncellendi
         run: |
           python - <<'PY'
           import os, sys
@@ -76,7 +76,7 @@ jobs:
           if not (1 <= h <= 720): sys.exit("backfill_hours 1-720")
           if not (0 < r <= 1): sys.exit("sample_rate (0,1]")
           if not (0 <= d <= 600): sys.exit("delay_sec 0-600")
-          if not (1 <= c <= 3): sys.exit("concurrency 1-3")
+          if not (1 <= c <= 5): sys.exit("concurrency 1-5")
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
           PY
 
@@ -157,24 +157,23 @@ jobs:
 
       # 2. COLLAR DEĞERLENDİRMESİ
       - name: Evaluate with Collar
-        timeout-minutes: 100
+        timeout-minutes: 120 # Artırıldı (100 -> 120)
         env:
           COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
-          CONCURRENCY: ${{ inputs.concurrency || '1' }}
+          CONCURRENCY: ${{ inputs.concurrency || '3' }} # Güncellendi
           REQ_PER_MIN: "8"
         run: python -m collar_watch.collar
 
       # 3. 24 SAATLİK SONUÇLARI HESAPLA (Geçmiş + Bugün)
-      # RPC 429 sorununu çözmek için RPC_RPS düşürüldü ve hata yönetimi eklendi
       - name: Track 24h Outcomes (LP Pulls + Anomalies)
-        timeout-minutes: 30 # RPC yavaşlığından dolayı süre 15'ten 30'a çıkarıldı
+        timeout-minutes: 30
         env:
           RPC_URL: ${{ env.ROBINHOOD_RPC }}
           POOL_MANAGER: ${{ env.POOL_MANAGER }}
           OUTCOMES_OUT: "outcomes.json"
           OUTCOMES_OUT_JSONL: "outcomes.jsonl"
-          RPC_RPS: "2"           # KRİTİK: Saniyede 5 istek yerine 2 istek (429'u önler)
+          RPC_RPS: "2"           # 429'u önlemek için saniyede 2 istek
           START_RANGE: "10000"
           MIN_RANGE: "500"
         run: python -m collar_watch.outcomes
@@ -195,17 +194,14 @@ jobs:
           source .github/scripts/databranch.sh
           setup_data_branch
           
-          # Dosyaları kopyala
           cp scorecard.json "$DATA_DIR/" 2>/dev/null || true
           cp recent.json "$DATA_DIR/" 2>/dev/null || true
           cp outcomes.json "$DATA_DIR/" 2>/dev/null || true
           cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true
           
-          # events.jsonl 'data' klasöründe, oraya kopyala
           mkdir -p "$DATA_DIR/data"
           cp data/events.jsonl "$DATA_DIR/data/" 2>/dev/null || true
           
-          # Pushla
           commit_push scorecard.json recent.json outcomes.json evaluations.jsonl data/events.jsonl
           echo "✓ live-data branch'ine push edildi"
 

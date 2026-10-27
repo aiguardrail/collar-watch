@@ -18,7 +18,7 @@ on:
       concurrency:
         description: "Paralel havuz sayısı"
         required: false
-        default: "3"  # KRİTİK GÜNCELLEME: 1 yerine 3 (Zaman aşımını önler)
+        default: "3"
 
   schedule:
     # New York saatiyle 03:00 (Kış saati: UTC 08:00)
@@ -41,7 +41,7 @@ env:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 180 # Tüm işlemlerin rahatça bitmesi için 3 saate çıkarıldı
+    timeout-minutes: 180
     env:
       HAS_R2: ${{ secrets.R2_ENDPOINT != '' }}
 
@@ -62,7 +62,7 @@ jobs:
           BACKFILL_HOURS: ${{ inputs.backfill_hours || '48' }}
           SAMPLE_RATE: ${{ inputs.sample_rate || '0.03' }}
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
-          CONCURRENCY: ${{ inputs.concurrency || '3' }} # Güncellendi
+          CONCURRENCY: ${{ inputs.concurrency || '3' }}
         run: |
           python - <<'PY'
           import os, sys
@@ -80,8 +80,8 @@ jobs:
           print(f"OK: backfill={h}h, sample={r:.2%}, delay={d}s, concurrency={c}")
           PY
 
-      # 1. GEÇMİŞ VERİYİ YÜKLE (24 SAATLİK ANALİZ İÇİN)
-      - name: Fetch historical data (for 24h outcomes)
+      # 1. GEÇMİŞ VERİYİ YÜKLE (KÜMÜLATİF HAFIZA)
+      - name: Fetch historical data (for cumulative outcomes)
         env:
           DATA_DIR: publish-data
           DATA_BRANCH: live-data
@@ -91,12 +91,17 @@ jobs:
           
           if [ -f "$DATA_DIR/evaluations.jsonl" ]; then
             cp "$DATA_DIR/evaluations.jsonl" .
-            echo "Geçmiş değerlendirmeler yüklendi."
+            echo "✓ Geçmiş değerlendirmeler yüklendi."
           fi
           if [ -f "$DATA_DIR/events.jsonl" ]; then
             mkdir -p data
             cp "$DATA_DIR/events.jsonl" data/
-            echo "Geçmiş havuz verileri yüklendi."
+            echo "✓ Geçmiş havuz verileri yüklendi."
+          fi
+          # YENİ: Geçmiş 24h sonuçlarını yükle
+          if [ -f "$DATA_DIR/outcomes.jsonl" ]; then
+            cp "$DATA_DIR/outcomes.jsonl" .
+            echo "✓ Geçmiş outcomes (kümülatif) yüklendi."
           fi
           
           # KRİTİK: Sonraki adım çakışmasın diye worktree'yi temizle
@@ -157,25 +162,26 @@ jobs:
 
       # 2. COLLAR DEĞERLENDİRMESİ
       - name: Evaluate with Collar
-        timeout-minutes: 120 # Artırıldı (100 -> 120)
+        timeout-minutes: 120
         env:
           COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
-          CONCURRENCY: ${{ inputs.concurrency || '3' }} # Güncellendi
+          CONCURRENCY: ${{ inputs.concurrency || '3' }}
           REQ_PER_MIN: "8"
         run: python -m collar_watch.collar
 
-      # 3. 24 SAATLİK SONUÇLARI HESAPLA (Geçmiş + Bugün)
-      - name: Track 24h Outcomes (LP Pulls + Anomalies)
+      # 3. 24 SAATLİK SONUÇLARI HESAPLA (KÜMÜLATİF + ROLLING WINDOW)
+      - name: Track 24h Outcomes (Cumulative)
         timeout-minutes: 30
         env:
           RPC_URL: ${{ env.ROBINHOOD_RPC }}
           POOL_MANAGER: ${{ env.POOL_MANAGER }}
           OUTCOMES_OUT: "outcomes.json"
           OUTCOMES_OUT_JSONL: "outcomes.jsonl"
-          RPC_RPS: "2"           # 429'u önlemek için saniyede 2 istek
+          RPC_RPS: "2"
           START_RANGE: "10000"
           MIN_RANGE: "500"
+          LOOKBACK_HOURS: "168"   # YENİ: sadece son 7 günün bloklarını tara (hızlı kal)
         run: python -m collar_watch.outcomes
 
       - name: Build UI JSON (sanity gate)
@@ -184,7 +190,7 @@ jobs:
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
         run: python -m collar_watch.publish
 
-      # 4. YAYINLAMA (Geçmişi ve bugünü kaydet)
+      # 4. YAYINLAMA (Kümülatif veriyi kaydet)
       - name: Push to live-data (public fallback)
         if: success() && fromJSON(inputs.delay_sec || '180') >= 150
         env:
@@ -199,10 +205,14 @@ jobs:
           cp outcomes.json "$DATA_DIR/" 2>/dev/null || true
           cp evaluations.jsonl "$DATA_DIR/" 2>/dev/null || true
           
+          # YENİ: Kümülatif outcomes.jsonl dosyasını pushla
+          cp outcomes.jsonl "$DATA_DIR/" 2>/dev/null || true
+          
           mkdir -p "$DATA_DIR/data"
           cp data/events.jsonl "$DATA_DIR/data/" 2>/dev/null || true
           
-          commit_push scorecard.json recent.json outcomes.json evaluations.jsonl data/events.jsonl
+          # YENİ: commit_push listesine outcomes.jsonl eklendi
+          commit_push scorecard.json recent.json outcomes.json evaluations.jsonl outcomes.jsonl data/events.jsonl
           echo "✓ live-data branch'ine push edildi"
 
       - name: Publish to R2

@@ -1,4 +1,4 @@
-"""outcomes.py - v0.7.2 (SWAP_TOPIC fix, incremental, per_pool for dashboard, by_hook, trusted guard)"""
+"""outcomes.py - v0.7.3 (state fix, by_hook label, bps 1000-block sample)"""
 import asyncio
 import json
 import math
@@ -49,7 +49,6 @@ for _pair in os.getenv("HOOK_LABELS", "").split(","):
         HOOK_LABELS[_a.strip().lower()] = _n.strip()
 
 class RangeError(RuntimeError): pass
-
 _rate = {"next": 0.0}
 _rate_lock = asyncio.Lock()
 
@@ -262,11 +261,14 @@ async def scan_chain_chunk(client, from_block, to_block, pool_ids, time_start):
     return liq_series, swap_series, frm, time_budget_hit
 
 async def blocks_per_sec(client, from_block, head):
-    a = await rpc(client, "eth_getBlockByNumber", [hex(from_block), False])
+    """v0.7.3: son 1000 bloktan hesap (eski bloklar yanıltıcı olabilir)"""
+    sample_from = max(from_block, head - 1000)
+    a = await rpc(client, "eth_getBlockByNumber", [hex(sample_from), False])
     b = await rpc(client, "eth_getBlockByNumber", [hex(head), False])
     dt = int(b["timestamp"], 16) - int(a["timestamp"], 16)
-    if dt <= 0: raise RuntimeError("blok hızı hesaplanamadı")
-    return (head - from_block) / dt
+    blocks = head - sample_from
+    if dt <= 0 or blocks <= 0: raise RuntimeError("blok hızı hesaplanamadı")
+    return blocks / dt
 
 def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0):
     end = init_block + window_blocks
@@ -325,7 +327,6 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
         if count / swap_count > 0.40: is_bot_activity = True
     flippers = buyer_wallets.intersection(seller_wallets)
     is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
-    # v0.7.2: swap_count > 0 zorunlu — ölü havuz "trusted" görünmesin
     is_trusted = (swap_count > 0 and not price_crash and max_dd_liq < LP_PULL_THRESHOLD and
                   not is_honeypot and not is_wash_trade and not is_synchronized_dump and
                   not is_bot_activity and not is_flipping_network and early_snipers <= 3)
@@ -369,10 +370,9 @@ def make_pending(p, reason="pending_history"):
     }
 
 def build_summary(inc, final_list, status, lookback_hours):
-    """v0.7.2: aktif/collecting ortak özet bloğu. Dashboard için per_pool + by_hook + unique_tokens."""
     if not inc:
         return {
-            "schema": 7, "rules_version": "v0.7.2-fixed",
+            "schema": 7, "rules_version": "v0.7.3-fixed",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "lookback_hours": lookback_hours,
             "status": status,
@@ -407,15 +407,17 @@ def build_summary(inc, final_list, status, lookback_hours):
         "pools_without_any_swap": sum(1 for r in inc if r.get("swap_count", 0) == 0),
     }
 
-    by_hook = defaultdict(lambda: {"n": 0, "rug": 0})
+    # v0.7.3: by_hook anahtarı HOOK LABEL (pons_v2 gibi), hook_addr da saklanıyor
+    by_hook = defaultdict(lambda: {"n": 0, "rug": 0, "hook_addr": None})
     for r in inc:
-        hk = (r.get("hook_addr") or "none").lower()
+        hk = (r.get("hook") or "unknown").lower()
         by_hook[hk]["n"] += 1
+        by_hook[hk]["hook_addr"] = by_hook[hk]["hook_addr"] or r.get("hook_addr")
         if r.get("rug_24h"):
             by_hook[hk]["rug"] += 1
 
     return {
-        "schema": 7, "rules_version": "v0.7.2-fixed",
+        "schema": 7, "rules_version": "v0.7.3-fixed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": lookback_hours,
         "status": status,
@@ -428,6 +430,7 @@ def build_summary(inc, final_list, status, lookback_hours):
         "anomalies_summary": anomalies,
         "by_hook": {
             hk: {"n": v["n"], "rug": v["rug"],
+                 "hook_addr": v["hook_addr"],
                  "rug_rate": round(v["rug"] / v["n"], 4) if v["n"] else None}
             for hk, v in by_hook.items()
         },
@@ -489,7 +492,9 @@ async def main():
     print(f"Reused: {len(reused)} | To scan: {len(to_scan)}")
 
     new_per_pool = []
-    last_successful_block = state.get("last_scanned_block", 0)
+    # v0.7.3: save_state artık her durumda çağrılacak
+    last_successful_block = last_scanned
+
     if to_scan:
         min_scan_block = max(scan_start, min(p["block"] for p in to_scan))
         to_block = head
@@ -528,11 +533,16 @@ async def main():
                 "price_drop_pct": a["max_price_dd_pct"],
                 "pool_id": pid,
                 "hook_addr": p.get("hook_addr"),
-                "hook": p.get("hook"),  # v0.7.2: dashboard hook eşleştirmesi için
+                "hook": p.get("hook"),
             })
+    else:
+        # Taranacak yeni havuz yok, state'i head'e ilerlet
+        last_successful_block = max(last_scanned, head)
+        print(f"Taranacak yeni havuz yok. State ilerletiliyor: {last_successful_block}")
 
-        save_state(last_successful_block)
-        print(f"State kaydedildi: last_block={last_successful_block}")
+    # v0.7.3: save_state artık if bloğu dışında, her durumda çağrılıyor
+    save_state(last_successful_block)
+    print(f"State kaydedildi: last_block={last_successful_block}")
 
     all_outcomes = dict(reused)
     for r in new_per_pool:

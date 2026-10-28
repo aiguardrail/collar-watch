@@ -1,109 +1,121 @@
 {
   "schema": 1,
   "rules_version": "v0",
-  "generated_at": "2026-10-28T05:00:31.441177+00:00",
+  "generated_at": "2026-10-28T19:10:10.126343+00:00",
   "window_hours": 48,
   "metric_type": "decision_stability",
   "sample": {
-    "evaluated": 345,
-    "n_complete": 345,
-    "total_pools_in_window": 150,
-    "sample_rate": 2.3
+    "evaluated": 453,
+    "n_complete": 453,
+    "total_pools_in_window": 155,
+    "sample_rate": 2.9226
   },
   "t0": {
     "counts": {
-      "ALLOW": 326,
-      "WARN": 17,
-      "DENY": 2,
+      "ALLOW": 421,
+      "WARN": 21,
+      "DENY": 11,
       "ERROR": 0,
       "UNKNOWN": 0
     }
   },
   "t3m": {
     "counts": {
-      "ALLOW": 328,
-      "WARN": 17,
-      "DENY": 0,
+      "ALLOW": 423,
+      "WARN": 20,
+      "DENY": 10,
       "ERROR": 0,
       "UNKNOWN": 0
     }
   },
   "transitions": {
-    "ALLOW\u2192ALLOW": 326,
-    "DENY\u2192ALLOW": 2,
-    "WARN\u2192WARN": 17
+    "ALLOW\u2192ALLOW": 415,
+    "ALLOW\u2192DENY": 5,
+    "ALLOW\u2192WARN": 1,
+    "DENY\u2192ALLOW": 8,
+    "DENY\u2192DENY": 3,
+    "WARN\u2192DENY": 2,
+    "WARN\u2192WARN": 19
   },
   "changes": {
-    "total_changed": 2,
-    "change_rate": 0.0058
+    "total_changed": 16,
+    "change_rate": 0.0353
   },
   "flip": {
-    "allow_t0_count": 326,
-    "allow_t3m_count": 328,
-    "flipped_out": 0,
-    "flipped_in": 2,
-    "flip_rate": 0.0,
+    "allow_t0_count": 421,
+    "allow_t3m_count": 423,
+    "flipped_out": 6,
+    "flipped_in": 8,
+    "flip_rate": 0.0143,
     "flip_rate_ci95": [
-      0.0,
-      0.0116
+      0.0065,
+      0.0307
     ]
   },
   "deny_breakdown": {
-    "total_deny": 2,
+    "total_deny": 11,
     "rule_based": 0,
     "risk_flag": 0,
-    "other": 2
+    "other": 11
   },
   "hook_distribution": [
     {
       "hook": "pons_v2",
-      "n": 157
+      "n": 207
     },
     {
       "hook": "none",
-      "n": 123
+      "n": 168
     },
     {
       "hook": "unknown_3",
-      "n": 30
+      "n": 38
     },
     {
       "hook": "unknown_4",
-      "n": 17
+      "n": 20
     },
     {
       "hook": "unknown",
-      "n": 14
-    },
-    {
-      "hook": "unknown_9",
-      "n": 2
+      "n": 15
     },
     {
       "hook": "unknown_7",
+      "n": 3
+    },
+    {
+      "hook": "unknown_9",
       "n": 2
     }
   ],
   "risk_factors": [
     {
       "factor": "Ownership not renounced (owner: 0xeb7C0347...)",
-      "n": 136
+      "n": 182
     },
     {
       "factor": "may be a false positive): ('0xf4d678b8'",
-      "n": 8
+      "n": 11
     },
     {
       "factor": "'0xf4d678b8')",
-      "n": 8
+      "n": 11
+    },
+    {
+      "factor": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/",
+      "n": 11
     },
     {
       "factor": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown",
-      "n": 7
+      "n": 9
     },
     {
       "factor": "Sell simulation reverted (balance slot unknown",
-      "n": 6
+      "n": 8
+    },
+    {
+      "factor": "Ownership not renounced (owner: 0x00000000...)",
+      "n": 4
     },
     {
       "factor": "may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance'",
@@ -116,14 +128,6 @@
     {
       "factor": "but combination is not strong enough for auto-deny",
       "n": 3
-    },
-    {
-      "factor": "Ownership not renounced (owner: 0x00000000...)",
-      "n": 2
-    },
-    {
-      "factor": "Owner can call risky functions",
-      "n": 2
     }
   ],
   "notes": {
@@ -132,17 +136,22 @@
     "conflict_disclosure": "This bot does not hold or trade any token. Scoring is independent of token ownership. Collar Guardrail has no token."
   },
   "outcomes": {
-    "measured": 129,
+    "measured": 181,
     "window": "24h",
     "method": "liquidity_pulled_within_24h",
-    "as_of": "2026-10-28T05:00:31.441162+00:00",
+    "as_of": "2026-10-28T19:10:10.126328+00:00",
     "by_verdict": {
       "ALLOW": {
-        "n": 124,
-        "rugs": 4,
-        "rate": 0.0323
+        "n": 170,
+        "rugs": 5,
+        "rate": 0.0294
       },
       "WARN": {
+        "n": 6,
+        "rugs": 0,
+        "rate": 0.0
+      },
+      "DENY": {
         "n": 5,
         "rugs": 0,
         "rate": 0.0

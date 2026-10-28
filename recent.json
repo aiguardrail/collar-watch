@@ -1,8 +1,704 @@
 {
   "schema": 1,
-  "generated_at": "2026-10-28T05:00:31.441427+00:00",
+  "generated_at": "2026-10-28T19:10:10.126613+00:00",
   "count": 100,
   "evaluations": [
+    {
+      "token": "0xe42ef79bc4fcb102d959215f8afd2835bfecfd1b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 999950,
+      "block": 100238761,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:19:12.049137+00:00",
+      "ts": "2026-10-28T18:19:12.049137+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xc31a7e82e8f918a11dce7ed657928661fd7287af",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 200000,
+      "block": 100234579,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:54.431816+00:00",
+      "ts": "2026-10-28T18:18:54.431816+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x5bd0acbea1652f1d42bb9c289144a5760910abb6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100231765,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:36.020881+00:00",
+      "ts": "2026-10-28T18:18:36.020881+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x7d60af92ff8fedaddeaa34be7c418d1c989d07cd",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100221394,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:17.747654+00:00",
+      "ts": "2026-10-28T18:18:17.747654+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xcb5975803a44cf2a8e2a72a6904319afb32a536f",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown",
+      "fee": 0,
+      "block": 100204260,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
+      },
+      "t3m": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:06.332813+00:00",
+      "ts": "2026-10-28T18:18:06.332813+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x6d827f41f09eee2a0e546cdb13e7425173172d0d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 870000,
+      "block": 100203989,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:42.222993+00:00",
+      "ts": "2026-10-28T18:17:42.222993+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x18053a944458fcf11cf917612ecb04995c299a1d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 100198170,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:23.969653+00:00",
+      "ts": "2026-10-28T18:17:23.969653+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xead1a3bdc58c193ba5a8644447b2da40d1368fca",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 100191604,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:06.226417+00:00",
+      "ts": "2026-10-28T18:17:06.226417+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe9b7b7d55ed2ca56b017c569f3c5dd30dd31fefc",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 500000,
+      "block": 100187588,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:47.623629+00:00",
+      "ts": "2026-10-28T18:16:47.623629+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe699d18dcb442ff0052f14b7a5343309bbf7343e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 890000,
+      "block": 100186986,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:29.656190+00:00",
+      "ts": "2026-10-28T18:16:29.656190+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x8355f63bc638de45b0154d602a148e073c483e17",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "unknown",
+      "fee": 8388608,
+      "block": 100181192,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:18.105933+00:00",
+      "ts": "2026-10-28T18:16:18.105933+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x27919ac58d5a04bec3c9b17d16ace1d3f5964227",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 860000,
+      "block": 100179098,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:00.021745+00:00",
+      "ts": "2026-10-28T18:16:00.021745+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xb4c8b1f18f67d4f25a51f5ead97dc95a79f2507b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 100168581,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:42.409649+00:00",
+      "ts": "2026-10-28T18:15:42.409649+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe2f687041e27ee6ff84d56db7ba47b854ae20087",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_3",
+      "fee": 0,
+      "block": 100150682,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:24.213783+00:00",
+      "ts": "2026-10-28T18:15:24.213783+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xae40491a44b4da887b9bf2c620ded90b8fb4fe48",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 100107919,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:06.303983+00:00",
+      "ts": "2026-10-28T18:15:06.303983+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x45970840b4fcf5b97a258b3c623e3eed48581ba3",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850000,
+      "block": 100090386,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:47.996698+00:00",
+      "ts": "2026-10-28T18:14:47.996698+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xf5cd1235da2fd37fa948658746b57cef19a8d09e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 69000,
+      "block": 100067858,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:30.233366+00:00",
+      "ts": "2026-10-28T18:14:30.233366+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xedbf91223639800bcd5756815caf908df3b890be",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 10940,
+      "block": 100037127,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:11.998418+00:00",
+      "ts": "2026-10-28T18:14:11.998418+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xbeab978ff7abb7ffc1cbafa9b446316db8b6d09e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100018154,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:53.984401+00:00",
+      "ts": "2026-10-28T18:13:53.984401+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x6f14b389e6bbde9f3b9797a0a8029846944dc6b6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100001167,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:36.042488+00:00",
+      "ts": "2026-10-28T18:13:36.042488+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x61bd613e1af4a2faf65174a7bde2f5d04ebb07e9",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 99995360,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:17.953736+00:00",
+      "ts": "2026-10-28T18:13:17.953736+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xaa5751ff3fb61e613993b2eb4eab1fce017081fc",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 59500,
+      "block": 99985603,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:00.313371+00:00",
+      "ts": "2026-10-28T18:13:00.313371+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x38a1253031623b1cace16765a852fb079f37d896",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 701300,
+      "block": 99973527,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xafD773b6...); Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000762616c616e636500000000000000000000000000000000000000000000000000')"
+      },
+      "t3m": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xafD773b6...); Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000762616c616e636500000000000000000000000000000000000000000000000000')"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:42.388147+00:00",
+      "ts": "2026-10-28T18:12:42.388147+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x4c07a5edbc6150602450a2f4623db8b5e05ce094",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99885146,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:23.914847+00:00",
+      "ts": "2026-10-28T18:12:23.914847+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x772a9e2b7eed20cdcb031ce2b04eb6ceacf7d688",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99870219,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:05.960149+00:00",
+      "ts": "2026-10-28T18:12:05.960149+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xadd31bd1c157d8b3377edb01c2b4f0a183381e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99860140,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:48.085132+00:00",
+      "ts": "2026-10-28T18:11:48.085132+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x492df03466ba0b65a3747e8080f0b05314c64148",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 99848651,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:30.576484+00:00",
+      "ts": "2026-10-28T18:11:30.576484+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xfd82d8db539b6ace0d50815845133767e24f1e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 46620,
+      "block": 99836269,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:12.267453+00:00",
+      "ts": "2026-10-28T18:11:12.267453+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x09cc1cd6f7068a30a8b146140f562a6a5ed671a6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99762558,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:10:53.975844+00:00",
+      "ts": "2026-10-28T18:10:53.975844+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
     {
       "token": "0xef61b7464cba3770a6d30c532540b9d8aaacc6ea",
       "symbol": null,
@@ -24,6 +720,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:09:46.120100+00:00",
       "ts": "2026-10-28T04:09:46.120100+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x900a5d6f7080c1afd7de5151907b84cad973a061",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99743758,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:10:41.607155+00:00",
+      "ts": "2026-10-28T18:10:41.607155+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -76,6 +796,54 @@
       "risk_score": null
     },
     {
+      "token": "0xe65a236a3111f6d3ca4058083985d3df02551bf9",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 100000,
+      "block": 99710965,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:10:17.931488+00:00",
+      "ts": "2026-10-28T18:10:17.931488+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
+      "token": "0x0c409f91c9475df86f69bee2901f54a61f2c1e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0xc0d6457c16cc70d6790dd43521c899c87ce02f35",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99710722,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:10:04.776466+00:00",
+      "ts": "2026-10-28T18:10:04.776466+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
       "token": "0xb0c24e20c7b426da52c21eaccd3c0abb29069aac",
       "symbol": null,
       "name": null,
@@ -121,6 +889,30 @@
       "evaluated_at": "2026-10-28T04:08:34.085875+00:00",
       "ts": "2026-10-28T04:08:34.085875+00:00",
       "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x46c8c71b4df138f77abe3e8dbddb26127f2d0743",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 830000,
+      "block": 99702939,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:09:41.920470+00:00",
+      "ts": "2026-10-28T18:09:41.920470+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -244,6 +1036,102 @@
       "risk_score": null
     },
     {
+      "token": "0x72be1277e198d0c476869253cb4e62807e14533c",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 50410,
+      "block": 99661059,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:09:23.969612+00:00",
+      "ts": "2026-10-28T18:09:23.969612+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x7f31fd20dd5355b932dc970b98929aca68901e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0xf0c4bf4c582cb3836e98394b1d4e7b7281101be8",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99648830,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:09:06.220486+00:00",
+      "ts": "2026-10-28T18:09:06.220486+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xbfa7469b01d73959d0a9446dfc0b4f92f4e4a2aa",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99647802,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:47.942641+00:00",
+      "ts": "2026-10-28T18:08:47.942641+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x48ac8ab7f4952f5293451d6cc1777befd38aaf8d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99647060,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:30.325245+00:00",
+      "ts": "2026-10-28T18:08:30.325245+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x45443c0f4d2526f0bf0e777efb90167ab780246c",
       "symbol": null,
       "name": null,
@@ -264,6 +1152,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:06:52.566624+00:00",
       "ts": "2026-10-28T04:06:52.566624+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x6330d8c3178a418788df01a47479c0ce7ccf450b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x9cae7470e38d24f933182683af128fa0585f1e18",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99642822,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:12.276135+00:00",
+      "ts": "2026-10-28T18:08:12.276135+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -292,30 +1204,6 @@
       "risk_score": null
     },
     {
-      "token": "0x13e269a19fecf1b2ef0247f728a0aa36481216c6",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 500000,
-      "block": 99630107,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:06:16.574463+00:00",
-      "ts": "2026-10-28T04:06:16.574463+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
       "token": "0x329fcaceb9ad6f9580dd5f643fed0646900d043c",
       "symbol": null,
       "name": null,
@@ -340,13 +1228,13 @@
       "risk_score": null
     },
     {
-      "token": "0xedbf91223639800bcd5756815caf908df3b890be",
+      "token": "0x6c5ae91379e59a53d8b8b5298424bba669542235",
       "symbol": null,
       "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 39552,
-      "block": 99617894,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_4",
+      "fee": 0,
+      "block": 99604781,
       "t0": {
         "decision": "ALLOW",
         "risk": null,
@@ -358,8 +1246,8 @@
         "reason": null
       },
       "changed": false,
-      "evaluated_at": "2026-10-28T04:05:40.591387+00:00",
-      "ts": "2026-10-28T04:05:40.591387+00:00",
+      "evaluated_at": "2026-10-28T18:07:54.223404+00:00",
+      "ts": "2026-10-28T18:07:54.223404+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -409,6 +1297,54 @@
       "evaluated_at": "2026-10-28T04:05:04.643954+00:00",
       "ts": "2026-10-28T04:05:04.643954+00:00",
       "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x1a819ac454c04158611cb84343a4e8bbb1062701",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 880000,
+      "block": 99598797,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:07:35.958515+00:00",
+      "ts": "2026-10-28T18:07:35.958515+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x15f3385625d7e364c5a6216fbbceadf10fa90e7d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 101406,
+      "block": 99584315,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:07:21.013160+00:00",
+      "ts": "2026-10-28T18:07:21.013160+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -588,19 +1524,19 @@
       "fee": 800000,
       "block": 99569131,
       "t0": {
-        "decision": "ALLOW",
+        "decision": "DENY",
         "risk": null,
-        "reason": null
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
       },
       "t3m": {
-        "decision": "ALLOW",
+        "decision": "DENY",
         "risk": null,
-        "reason": null
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
       },
       "changed": false,
-      "evaluated_at": "2026-10-28T04:03:34.945248+00:00",
-      "ts": "2026-10-28T04:03:34.945248+00:00",
-      "verdict": "ALLOW",
+      "evaluated_at": "2026-10-28T18:07:01.036816+00:00",
+      "ts": "2026-10-28T18:07:01.036816+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -624,6 +1560,150 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:03:16.571638+00:00",
       "ts": "2026-10-28T04:03:16.571638+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x13e269a19fecf1b2ef0247f728a0aa36481216c6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 760000,
+      "block": 99563985,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:43.115853+00:00",
+      "ts": "2026-10-28T18:06:43.115853+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
+      "token": "0xdaf59e69e0b9c8ca97b4d5281206d9e857f47cd6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 990000,
+      "block": 99562236,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:23.923803+00:00",
+      "ts": "2026-10-28T18:06:23.923803+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xd26585099c44173b0fb316e6f253ca13bd417d67",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 989999,
+      "block": 99562139,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:06.007493+00:00",
+      "ts": "2026-10-28T18:06:06.007493+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xa983224836eb015af60abb31293b4317d8f8c360",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99561687,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:48.475434+00:00",
+      "ts": "2026-10-28T18:05:48.475434+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x1f7cd51cccf62b1e9661270c41bdea1bd533520c",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99559224,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:30.067727+00:00",
+      "ts": "2026-10-28T18:05:30.067727+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x5284921380c1ed1e6bb81bffa7779e0f181d9aac",
+      "symbol": null,
+      "name": null,
+      "quote": "0xe0444ef8bf4ed74f74fd73686e2ddf4c1c5591e8",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99552498,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:12.156763+00:00",
+      "ts": "2026-10-28T18:05:12.156763+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -676,6 +1756,30 @@
       "risk_score": null
     },
     {
+      "token": "0xe0af63073427bf9ebad7d622bfede874e08566ea",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 820000,
+      "block": 99542701,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xe2567774...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xe2567774...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:04:54.149820+00:00",
+      "ts": "2026-10-28T18:04:54.149820+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x941ae714ec6d8130c7b75d67160ca08f1e7d11dd",
       "symbol": null,
       "name": null,
@@ -696,6 +1800,30 @@
       "changed": false,
       "evaluated_at": "2026-10-27T23:04:56.741115+00:00",
       "ts": "2026-10-27T23:04:56.741115+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xf2303c1bdb95668f9844928f5e6719a4220f0087",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_3",
+      "fee": 0,
+      "block": 99533097,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:04:36.274432+00:00",
+      "ts": "2026-10-28T18:04:36.274432+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -796,6 +1924,30 @@
       "risk_score": null
     },
     {
+      "token": "0xcec185eb182c47d1ba1efc84e6959e18cd620be4",
+      "symbol": null,
+      "name": null,
+      "quote": "0xd62ffb4339031ca66f50025dbb54ca318f56ba7e",
+      "hook": "none",
+      "fee": 250000,
+      "block": 99526454,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xf09AFe78...)"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:04:19.156235+00:00",
+      "ts": "2026-10-28T18:04:19.156235+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x1ffb612eabf7ab099876082267517a40c3bd07e3",
       "symbol": null,
       "name": null,
@@ -816,6 +1968,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:02:22.669612+00:00",
       "ts": "2026-10-28T04:02:22.669612+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x62f3b90c1de64f1586e706c4fd5dfd4e5ba97f15",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 890000,
+      "block": 99521674,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:04:01.150254+00:00",
+      "ts": "2026-10-28T18:04:01.150254+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -964,6 +2140,30 @@
       "risk_score": null
     },
     {
+      "token": "0x26b442be376d53152785f81e9bd8a4141ead0ba3",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99498865,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:03:43.078122+00:00",
+      "ts": "2026-10-28T18:03:43.078122+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
       "token": "0xbd4da58b2460e84cb8cda44c8c1202a4f56c11c9",
       "symbol": null,
       "name": null,
@@ -988,6 +2188,54 @@
       "risk_score": null
     },
     {
+      "token": "0xc1a03b516e8a53a5a527bbf6de79a2037cd8cda6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850001,
+      "block": 99493875,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:03:25.341345+00:00",
+      "ts": "2026-10-28T18:03:25.341345+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x486242b1284900b497aff3febb39bb4a2ca01e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 810000,
+      "block": 99493548,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:03:06.160391+00:00",
+      "ts": "2026-10-28T18:03:06.160391+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0xe321552603e0be5cadf7f7f00fbcd3e42360a6ea",
       "symbol": null,
       "name": null,
@@ -1008,6 +2256,54 @@
       "changed": false,
       "evaluated_at": "2026-10-27T23:02:16.663130+00:00",
       "ts": "2026-10-27T23:02:16.663130+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x70b02a71281594c192c0262272029421df0816c6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850000,
+      "block": 99484402,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:02:48.031324+00:00",
+      "ts": "2026-10-28T18:02:48.031324+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x3ba500f1ababbcf0f0247d06d1c56fd7e6c4c09d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 19800,
+      "block": 99457121,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:02:30.029414+00:00",
+      "ts": "2026-10-28T18:02:30.029414+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -1104,1308 +2400,708 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:01:10.566588+00:00",
       "ts": "2026-10-28T04:01:10.566588+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x46052c0eb955f9c1929329087b107dfd971d6327",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99437456,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:52.648589+00:00",
-      "ts": "2026-10-28T04:00:52.648589+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x5640724ef47b629bc3534b386cd733913265095b",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99436038,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:34.718480+00:00",
-      "ts": "2026-10-28T04:00:34.718480+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8735d3910bb91b876f0fd1d81da3a0f8adbf1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99432917,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:01:22.550003+00:00",
-      "ts": "2026-10-27T23:01:22.550003+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x5211855b1915ba8217d4b74e3b7d4f32be7f7f0f",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99427776,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:16.624705+00:00",
-      "ts": "2026-10-28T04:00:16.624705+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xeb6dbc633db6565784ec9de88412faae2ec52920",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 790000,
-      "block": 99422388,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:00:46.525610+00:00",
-      "ts": "2026-10-27T23:00:46.525610+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xc3c3c0fc1aab6a41483fa1ae6859e47acef8c741",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99421941,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:58.529463+00:00",
-      "ts": "2026-10-28T03:59:58.529463+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x48ea6c2a02e114f8d80d886b49fe1fd5be2637eb",
-      "symbol": null,
-      "name": null,
-      "quote": "0x71796aad4cdff942d3ee8bb1227f779255f89dbc",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99398514,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:40.543340+00:00",
-      "ts": "2026-10-28T03:59:40.543340+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x350ee85874aede933b117de64ec938fd4237f98c",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "none",
-      "fee": 200000,
-      "block": 99391178,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('Panic error 0x11: Arithmetic operation results in underflow or overflow.', '0x4e487b710000000000000000000000000000000000000000000000000000000000000011')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('Panic error 0x11: Arithmetic operation results in underflow or overflow.', '0x4e487b710000000000000000000000000000000000000000000000000000000000000011')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:22.981251+00:00",
-      "ts": "2026-10-28T03:59:22.981251+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x0dc210c9af57a664761f02341c0fb6993b281114",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99390181,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:04.634122+00:00",
-      "ts": "2026-10-28T03:59:04.634122+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x49994db321af441d6b3da16edbe993f26d0b1d15",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99389560,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:46.790534+00:00",
-      "ts": "2026-10-28T03:58:46.790534+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x53d073f9ebff0e2d02dff361b8c27889ed7327c3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 850000,
-      "block": 99386174,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:28.568998+00:00",
-      "ts": "2026-10-28T03:58:28.568998+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xc630c2a328d946a9adea4e4e8490ead242e21e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99384834,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:00:10.530985+00:00",
-      "ts": "2026-10-27T23:00:10.530985+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe218ee8969c49cb6ff06fa0e226991a91bd0acdc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99381500,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:52.762388+00:00",
-      "ts": "2026-10-27T22:59:52.762388+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x51c01ca78d8805b9f47069d71f4bd7d23336a8c6",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99380832,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:34.663006+00:00",
-      "ts": "2026-10-27T22:59:34.663006+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x4ef84b9260ff5d89ffa266a22259a039075ac442",
-      "symbol": null,
-      "name": null,
-      "quote": "0x71796aad4cdff942d3ee8bb1227f779255f89dbc",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99375748,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:16.563805+00:00",
-      "ts": "2026-10-27T22:59:16.563805+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xec155615136f99aa048f9751be3d5e25dcfafba3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99375348,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:58.525981+00:00",
-      "ts": "2026-10-27T22:58:58.525981+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x09b85ada6d101795f2613daac814328dbbe96a05",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99369938,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:40.524557+00:00",
-      "ts": "2026-10-27T22:58:40.524557+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xf351d93a524760433abc71fcad4b61488b0926ea",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 810000,
-      "block": 99359932,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x60D886ba...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x60D886ba...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:10.914794+00:00",
-      "ts": "2026-10-28T03:58:10.914794+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xfaa9e684de69d8735dd211fd3267486240e71f19",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99356227,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:52.958780+00:00",
-      "ts": "2026-10-28T03:57:52.958780+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x7066a64c24e4206cd62e83bf198c1e7eb361f51e",
-      "symbol": null,
-      "name": null,
-      "quote": "0x89ad791bd093d022d492cb3004f051340cfc1e18",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99352057,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:34.924086+00:00",
-      "ts": "2026-10-28T03:57:34.924086+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8fc98b871678f9749d17d968a476386f2da6f831",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 400000,
-      "block": 99346088,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:22.457530+00:00",
-      "ts": "2026-10-27T22:58:22.457530+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xb87363d8125ea061141ea0759eb207ca41dd1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xfe09fb328be1c286b4f597ed34764b7472ae72c5",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99328673,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:16.593928+00:00",
-      "ts": "2026-10-28T03:57:16.593928+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x39dbed3a2bd333467115de45665cc57f813c4571",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd1305585229532ef744ce8954f3ba2656ba0416d",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99321975,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:58.595720+00:00",
-      "ts": "2026-10-28T03:56:58.595720+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x365b26889299b0523541941fa528ae50e06afcc5",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99321026,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:40.559714+00:00",
-      "ts": "2026-10-28T03:56:40.559714+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8dc0178e4269086e24de24fad4e11d75df191aa7",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99320226,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:04.488825+00:00",
-      "ts": "2026-10-27T22:58:04.488825+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x931a199506a77e922740a9e2b6253841b2d6c753",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319692,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:22.550403+00:00",
-      "ts": "2026-10-28T03:56:22.550403+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xbb60967f2c81a497b149f09499552864a24f1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319412,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:46.575432+00:00",
-      "ts": "2026-10-27T22:57:46.575432+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe25ca1bf1ff15492f2a9ded25138caa5940640dc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319111,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:28.507964+00:00",
-      "ts": "2026-10-27T22:57:28.507964+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x18a782fe5d5d1c337da42638c01bf3ed445c1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xccee82fe024c36fa15e1005ede3e9e4787e23d09",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99314179,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:52:05.458898+00:00",
-      "ts": "2026-10-27T15:52:05.458898+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xf1b95ae4e7700b962714702ea53784dc8492a856",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 600000,
-      "block": 99310507,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:10.502279+00:00",
-      "ts": "2026-10-27T22:57:10.502279+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0xec383a25b6434216eaa695c11c26b765ba061521",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 99900,
-      "block": 99297868,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:04.607201+00:00",
-      "ts": "2026-10-28T03:56:04.607201+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xab093def657f15df31b33922a95e047add645b29",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 33500,
-      "block": 99281988,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:41.768120+00:00",
-      "ts": "2026-10-27T15:51:41.768120+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xbd095fb55f55d59f1e16115dabe3b81d5ce035dc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99281646,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:46.582220+00:00",
-      "ts": "2026-10-28T03:55:46.582220+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x60c9548091ef083acfbace7f1e7fd663a02a7701",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99263669,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:23.868359+00:00",
-      "ts": "2026-10-27T15:51:23.868359+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x411efb0e7f985935daec3d4c3ebaea0d0ad7d89f",
-      "hook": "none",
-      "fee": 375,
-      "block": 99261412,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:28.626636+00:00",
-      "ts": "2026-10-28T03:55:28.626636+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd11f4b6d13af5dad94f049c22e21f87f9c8da171",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99257435,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:11.197242+00:00",
-      "ts": "2026-10-27T15:51:11.197242+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd28fe4e14dcc22b687153a334df76fd1f3d90087",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99256607,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:10.683517+00:00",
-      "ts": "2026-10-28T03:55:10.683517+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "symbol": null,
-      "name": null,
-      "quote": "0xeb8bd378b3161fab7460f3aa444df542bde79743",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99256119,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:52.881484+00:00",
-      "ts": "2026-10-28T03:54:52.881484+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xee66582f5ca8ce7b132d37182e5e9709f62ffdf7",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99255123,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:52.404783+00:00",
-      "ts": "2026-10-27T15:50:52.404783+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
-      "symbol": null,
-      "name": null,
-      "quote": "0x2d9240832dd0f9f66f1c1fe2d4b9278611611e18",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99244043,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:52.483473+00:00",
-      "ts": "2026-10-27T22:56:52.483473+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xad07b158d6ecd46c7c85064c280559f19a420d86",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 900000,
-      "block": 99234225,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:34.563703+00:00",
-      "ts": "2026-10-27T22:56:34.563703+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x4de7e04d1d0d2520dcab187d922b2134be8d533b",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 999500,
-      "block": 99232891,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:35.050408+00:00",
-      "ts": "2026-10-28T03:54:35.050408+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd04fcb4b4007123624e60ca474e4f975a5e92e24",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99226994,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:29.974861+00:00",
-      "ts": "2026-10-27T15:50:29.974861+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe8f28b5a1290eed4c6b374ab26e315b2739fc311",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99223825,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:11.565550+00:00",
-      "ts": "2026-10-27T15:50:11.565550+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x59e3404c26e2d348ae75c985e01d07f0abeaf004",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 40000,
-      "block": 99209081,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:16.492540+00:00",
-      "ts": "2026-10-27T22:56:16.492540+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x84ca9bf43803276ecc68a0a1cc1e17a0c67efd9d",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 40000,
-      "block": 99184873,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:53.579280+00:00",
-      "ts": "2026-10-27T15:49:53.579280+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x9ab02ead789b6903c3c44d0ed32f9c707cdf12fd",
-      "symbol": null,
-      "name": null,
-      "quote": "0xb796a2cc2f85ecc4772a96b7a58a0d626cc6aec8",
-      "hook": "none",
-      "fee": 9000,
-      "block": 99182011,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:41.794819+00:00",
-      "ts": "2026-10-27T15:49:41.794819+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x7e57a4cd4bb2eb510aef548c990f8dd4096be69a",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99161697,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x00000000...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x00000000...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:17.653279+00:00",
-      "ts": "2026-10-27T15:49:17.653279+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x7dc90d39e96b2bc3166a960ea5233ad3007ee9a2",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99148491,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:16.584523+00:00",
-      "ts": "2026-10-28T03:54:16.584523+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd34529f904cf3db6f5f4983b7f727c9f2c0bfce5",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99143629,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:06.021073+00:00",
-      "ts": "2026-10-27T15:49:06.021073+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x0ceea25b9481eb227663b92c315e31840253ca2b",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99134293,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:55:58.486896+00:00",
-      "ts": "2026-10-27T22:55:58.486896+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x1937f6afe2a8212c73f671abb66eafb0a805cf23",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99132554,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:53:58.622878+00:00",
-      "ts": "2026-10-28T03:53:58.622878+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xa134c4a31145dc99ac8eb8279406904af1e65790",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99132229,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:53:40.561556+00:00",
-      "ts": "2026-10-28T03:53:40.561556+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x6191ec18f9e7a0147d23903c669e7f457603a133",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99130298,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:48:48.053162+00:00",
-      "ts": "2026-10-27T15:48:48.053162+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     }
   ],
   "items": [
     {
+      "token": "0xe42ef79bc4fcb102d959215f8afd2835bfecfd1b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 999950,
+      "block": 100238761,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:19:12.049137+00:00",
+      "ts": "2026-10-28T18:19:12.049137+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xc31a7e82e8f918a11dce7ed657928661fd7287af",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 200000,
+      "block": 100234579,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:54.431816+00:00",
+      "ts": "2026-10-28T18:18:54.431816+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x5bd0acbea1652f1d42bb9c289144a5760910abb6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100231765,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:36.020881+00:00",
+      "ts": "2026-10-28T18:18:36.020881+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x7d60af92ff8fedaddeaa34be7c418d1c989d07cd",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100221394,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:17.747654+00:00",
+      "ts": "2026-10-28T18:18:17.747654+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xcb5975803a44cf2a8e2a72a6904319afb32a536f",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown",
+      "fee": 0,
+      "block": 100204260,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
+      },
+      "t3m": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:18:06.332813+00:00",
+      "ts": "2026-10-28T18:18:06.332813+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x6d827f41f09eee2a0e546cdb13e7425173172d0d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 870000,
+      "block": 100203989,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:42.222993+00:00",
+      "ts": "2026-10-28T18:17:42.222993+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x18053a944458fcf11cf917612ecb04995c299a1d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 100198170,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:23.969653+00:00",
+      "ts": "2026-10-28T18:17:23.969653+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xead1a3bdc58c193ba5a8644447b2da40d1368fca",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 100191604,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:17:06.226417+00:00",
+      "ts": "2026-10-28T18:17:06.226417+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe9b7b7d55ed2ca56b017c569f3c5dd30dd31fefc",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 500000,
+      "block": 100187588,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:47.623629+00:00",
+      "ts": "2026-10-28T18:16:47.623629+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe699d18dcb442ff0052f14b7a5343309bbf7343e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 890000,
+      "block": 100186986,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:29.656190+00:00",
+      "ts": "2026-10-28T18:16:29.656190+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x8355f63bc638de45b0154d602a148e073c483e17",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "unknown",
+      "fee": 8388608,
+      "block": 100181192,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:18.105933+00:00",
+      "ts": "2026-10-28T18:16:18.105933+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x27919ac58d5a04bec3c9b17d16ace1d3f5964227",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 860000,
+      "block": 100179098,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:16:00.021745+00:00",
+      "ts": "2026-10-28T18:16:00.021745+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xb4c8b1f18f67d4f25a51f5ead97dc95a79f2507b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 100168581,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:42.409649+00:00",
+      "ts": "2026-10-28T18:15:42.409649+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xe2f687041e27ee6ff84d56db7ba47b854ae20087",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_3",
+      "fee": 0,
+      "block": 100150682,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:24.213783+00:00",
+      "ts": "2026-10-28T18:15:24.213783+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xae40491a44b4da887b9bf2c620ded90b8fb4fe48",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 100107919,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:15:06.303983+00:00",
+      "ts": "2026-10-28T18:15:06.303983+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x45970840b4fcf5b97a258b3c623e3eed48581ba3",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850000,
+      "block": 100090386,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:47.996698+00:00",
+      "ts": "2026-10-28T18:14:47.996698+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xf5cd1235da2fd37fa948658746b57cef19a8d09e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 69000,
+      "block": 100067858,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:30.233366+00:00",
+      "ts": "2026-10-28T18:14:30.233366+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xedbf91223639800bcd5756815caf908df3b890be",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 10940,
+      "block": 100037127,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:14:11.998418+00:00",
+      "ts": "2026-10-28T18:14:11.998418+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xbeab978ff7abb7ffc1cbafa9b446316db8b6d09e",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100018154,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:53.984401+00:00",
+      "ts": "2026-10-28T18:13:53.984401+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x6f14b389e6bbde9f3b9797a0a8029846944dc6b6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 100001167,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:36.042488+00:00",
+      "ts": "2026-10-28T18:13:36.042488+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x61bd613e1af4a2faf65174a7bde2f5d04ebb07e9",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 900000,
+      "block": 99995360,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:17.953736+00:00",
+      "ts": "2026-10-28T18:13:17.953736+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xaa5751ff3fb61e613993b2eb4eab1fce017081fc",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 59500,
+      "block": 99985603,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:13:00.313371+00:00",
+      "ts": "2026-10-28T18:13:00.313371+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x38a1253031623b1cace16765a852fb079f37d896",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 701300,
+      "block": 99973527,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xafD773b6...); Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000762616c616e636500000000000000000000000000000000000000000000000000')"
+      },
+      "t3m": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xafD773b6...); Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000762616c616e636500000000000000000000000000000000000000000000000000')"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:42.388147+00:00",
+      "ts": "2026-10-28T18:12:42.388147+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x4c07a5edbc6150602450a2f4623db8b5e05ce094",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99885146,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:23.914847+00:00",
+      "ts": "2026-10-28T18:12:23.914847+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x772a9e2b7eed20cdcb031ce2b04eb6ceacf7d688",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99870219,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:12:05.960149+00:00",
+      "ts": "2026-10-28T18:12:05.960149+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xadd31bd1c157d8b3377edb01c2b4f0a183381e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99860140,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:48.085132+00:00",
+      "ts": "2026-10-28T18:11:48.085132+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x492df03466ba0b65a3747e8080f0b05314c64148",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 800000,
+      "block": 99848651,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:30.576484+00:00",
+      "ts": "2026-10-28T18:11:30.576484+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xfd82d8db539b6ace0d50815845133767e24f1e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 46620,
+      "block": 99836269,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:11:12.267453+00:00",
+      "ts": "2026-10-28T18:11:12.267453+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x09cc1cd6f7068a30a8b146140f562a6a5ed671a6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99762558,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:10:53.975844+00:00",
+      "ts": "2026-10-28T18:10:53.975844+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0xef61b7464cba3770a6d30c532540b9d8aaacc6ea",
       "symbol": null,
       "name": null,
@@ -2426,6 +3122,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:09:46.120100+00:00",
       "ts": "2026-10-28T04:09:46.120100+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x900a5d6f7080c1afd7de5151907b84cad973a061",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99743758,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:10:41.607155+00:00",
+      "ts": "2026-10-28T18:10:41.607155+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -2478,6 +3198,54 @@
       "risk_score": null
     },
     {
+      "token": "0xe65a236a3111f6d3ca4058083985d3df02551bf9",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 100000,
+      "block": 99710965,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:10:17.931488+00:00",
+      "ts": "2026-10-28T18:10:17.931488+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
+      "token": "0x0c409f91c9475df86f69bee2901f54a61f2c1e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0xc0d6457c16cc70d6790dd43521c899c87ce02f35",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99710722,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:10:04.776466+00:00",
+      "ts": "2026-10-28T18:10:04.776466+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
       "token": "0xb0c24e20c7b426da52c21eaccd3c0abb29069aac",
       "symbol": null,
       "name": null,
@@ -2523,6 +3291,30 @@
       "evaluated_at": "2026-10-28T04:08:34.085875+00:00",
       "ts": "2026-10-28T04:08:34.085875+00:00",
       "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x46c8c71b4df138f77abe3e8dbddb26127f2d0743",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 830000,
+      "block": 99702939,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:09:41.920470+00:00",
+      "ts": "2026-10-28T18:09:41.920470+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -2646,6 +3438,102 @@
       "risk_score": null
     },
     {
+      "token": "0x72be1277e198d0c476869253cb4e62807e14533c",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 50410,
+      "block": 99661059,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:09:23.969612+00:00",
+      "ts": "2026-10-28T18:09:23.969612+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x7f31fd20dd5355b932dc970b98929aca68901e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0xf0c4bf4c582cb3836e98394b1d4e7b7281101be8",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99648830,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:09:06.220486+00:00",
+      "ts": "2026-10-28T18:09:06.220486+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xbfa7469b01d73959d0a9446dfc0b4f92f4e4a2aa",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99647802,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:47.942641+00:00",
+      "ts": "2026-10-28T18:08:47.942641+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x48ac8ab7f4952f5293451d6cc1777befd38aaf8d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99647060,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:30.325245+00:00",
+      "ts": "2026-10-28T18:08:30.325245+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x45443c0f4d2526f0bf0e777efb90167ab780246c",
       "symbol": null,
       "name": null,
@@ -2666,6 +3554,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:06:52.566624+00:00",
       "ts": "2026-10-28T04:06:52.566624+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x6330d8c3178a418788df01a47479c0ce7ccf450b",
+      "symbol": null,
+      "name": null,
+      "quote": "0x9cae7470e38d24f933182683af128fa0585f1e18",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99642822,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:08:12.276135+00:00",
+      "ts": "2026-10-28T18:08:12.276135+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -2694,30 +3606,6 @@
       "risk_score": null
     },
     {
-      "token": "0x13e269a19fecf1b2ef0247f728a0aa36481216c6",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 500000,
-      "block": 99630107,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:06:16.574463+00:00",
-      "ts": "2026-10-28T04:06:16.574463+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
       "token": "0x329fcaceb9ad6f9580dd5f643fed0646900d043c",
       "symbol": null,
       "name": null,
@@ -2742,13 +3630,13 @@
       "risk_score": null
     },
     {
-      "token": "0xedbf91223639800bcd5756815caf908df3b890be",
+      "token": "0x6c5ae91379e59a53d8b8b5298424bba669542235",
       "symbol": null,
       "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 39552,
-      "block": 99617894,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_4",
+      "fee": 0,
+      "block": 99604781,
       "t0": {
         "decision": "ALLOW",
         "risk": null,
@@ -2760,8 +3648,8 @@
         "reason": null
       },
       "changed": false,
-      "evaluated_at": "2026-10-28T04:05:40.591387+00:00",
-      "ts": "2026-10-28T04:05:40.591387+00:00",
+      "evaluated_at": "2026-10-28T18:07:54.223404+00:00",
+      "ts": "2026-10-28T18:07:54.223404+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -2811,6 +3699,54 @@
       "evaluated_at": "2026-10-28T04:05:04.643954+00:00",
       "ts": "2026-10-28T04:05:04.643954+00:00",
       "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x1a819ac454c04158611cb84343a4e8bbb1062701",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 880000,
+      "block": 99598797,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:07:35.958515+00:00",
+      "ts": "2026-10-28T18:07:35.958515+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x15f3385625d7e364c5a6216fbbceadf10fa90e7d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 101406,
+      "block": 99584315,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:07:21.013160+00:00",
+      "ts": "2026-10-28T18:07:21.013160+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -2990,19 +3926,19 @@
       "fee": 800000,
       "block": 99569131,
       "t0": {
-        "decision": "ALLOW",
+        "decision": "DENY",
         "risk": null,
-        "reason": null
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
       },
       "t3m": {
-        "decision": "ALLOW",
+        "decision": "DENY",
         "risk": null,
-        "reason": null
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
       },
       "changed": false,
-      "evaluated_at": "2026-10-28T04:03:34.945248+00:00",
-      "ts": "2026-10-28T04:03:34.945248+00:00",
-      "verdict": "ALLOW",
+      "evaluated_at": "2026-10-28T18:07:01.036816+00:00",
+      "ts": "2026-10-28T18:07:01.036816+00:00",
+      "verdict": "DENY",
       "risk_score": null
     },
     {
@@ -3026,6 +3962,150 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:03:16.571638+00:00",
       "ts": "2026-10-28T04:03:16.571638+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x13e269a19fecf1b2ef0247f728a0aa36481216c6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 760000,
+      "block": 99563985,
+      "t0": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:43.115853+00:00",
+      "ts": "2026-10-28T18:06:43.115853+00:00",
+      "verdict": "DENY",
+      "risk_score": null
+    },
+    {
+      "token": "0xdaf59e69e0b9c8ca97b4d5281206d9e857f47cd6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 990000,
+      "block": 99562236,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:23.923803+00:00",
+      "ts": "2026-10-28T18:06:23.923803+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xd26585099c44173b0fb316e6f253ca13bd417d67",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 989999,
+      "block": 99562139,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:06:06.007493+00:00",
+      "ts": "2026-10-28T18:06:06.007493+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xa983224836eb015af60abb31293b4317d8f8c360",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99561687,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:48.475434+00:00",
+      "ts": "2026-10-28T18:05:48.475434+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x1f7cd51cccf62b1e9661270c41bdea1bd533520c",
+      "symbol": null,
+      "name": null,
+      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99559224,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:30.067727+00:00",
+      "ts": "2026-10-28T18:05:30.067727+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x5284921380c1ed1e6bb81bffa7779e0f181d9aac",
+      "symbol": null,
+      "name": null,
+      "quote": "0xe0444ef8bf4ed74f74fd73686e2ddf4c1c5591e8",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99552498,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:05:12.156763+00:00",
+      "ts": "2026-10-28T18:05:12.156763+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -3078,6 +4158,30 @@
       "risk_score": null
     },
     {
+      "token": "0xe0af63073427bf9ebad7d622bfede874e08566ea",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 820000,
+      "block": 99542701,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xe2567774...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xe2567774...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:04:54.149820+00:00",
+      "ts": "2026-10-28T18:04:54.149820+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x941ae714ec6d8130c7b75d67160ca08f1e7d11dd",
       "symbol": null,
       "name": null,
@@ -3098,6 +4202,30 @@
       "changed": false,
       "evaluated_at": "2026-10-27T23:04:56.741115+00:00",
       "ts": "2026-10-27T23:04:56.741115+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0xf2303c1bdb95668f9844928f5e6719a4220f0087",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "unknown_3",
+      "fee": 0,
+      "block": 99533097,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:04:36.274432+00:00",
+      "ts": "2026-10-28T18:04:36.274432+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -3198,6 +4326,30 @@
       "risk_score": null
     },
     {
+      "token": "0xcec185eb182c47d1ba1efc84e6959e18cd620be4",
+      "symbol": null,
+      "name": null,
+      "quote": "0xd62ffb4339031ca66f50025dbb54ca318f56ba7e",
+      "hook": "none",
+      "fee": 250000,
+      "block": 99526454,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xf09AFe78...)"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:04:19.156235+00:00",
+      "ts": "2026-10-28T18:04:19.156235+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0x1ffb612eabf7ab099876082267517a40c3bd07e3",
       "symbol": null,
       "name": null,
@@ -3218,6 +4370,30 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:02:22.669612+00:00",
       "ts": "2026-10-28T04:02:22.669612+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x62f3b90c1de64f1586e706c4fd5dfd4e5ba97f15",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 890000,
+      "block": 99521674,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:04:01.150254+00:00",
+      "ts": "2026-10-28T18:04:01.150254+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -3366,6 +4542,30 @@
       "risk_score": null
     },
     {
+      "token": "0x26b442be376d53152785f81e9bd8a4141ead0ba3",
+      "symbol": null,
+      "name": null,
+      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "hook": "pons_v2",
+      "fee": 8388608,
+      "block": 99498865,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:03:43.078122+00:00",
+      "ts": "2026-10-28T18:03:43.078122+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
       "token": "0xbd4da58b2460e84cb8cda44c8c1202a4f56c11c9",
       "symbol": null,
       "name": null,
@@ -3390,6 +4590,54 @@
       "risk_score": null
     },
     {
+      "token": "0xc1a03b516e8a53a5a527bbf6de79a2037cd8cda6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850001,
+      "block": 99493875,
+      "t0": {
+        "decision": "WARN",
+        "risk": null,
+        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
+      },
+      "t3m": {
+        "decision": "DENY",
+        "risk": null,
+        "reason": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/"
+      },
+      "changed": true,
+      "evaluated_at": "2026-10-28T18:03:25.341345+00:00",
+      "ts": "2026-10-28T18:03:25.341345+00:00",
+      "verdict": "WARN",
+      "risk_score": null
+    },
+    {
+      "token": "0x486242b1284900b497aff3febb39bb4a2ca01e18",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 810000,
+      "block": 99493548,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:03:06.160391+00:00",
+      "ts": "2026-10-28T18:03:06.160391+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
       "token": "0xe321552603e0be5cadf7f7f00fbcd3e42360a6ea",
       "symbol": null,
       "name": null,
@@ -3410,6 +4658,54 @@
       "changed": false,
       "evaluated_at": "2026-10-27T23:02:16.663130+00:00",
       "ts": "2026-10-27T23:02:16.663130+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x70b02a71281594c192c0262272029421df0816c6",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 850000,
+      "block": 99484402,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:02:48.031324+00:00",
+      "ts": "2026-10-28T18:02:48.031324+00:00",
+      "verdict": "ALLOW",
+      "risk_score": null
+    },
+    {
+      "token": "0x3ba500f1ababbcf0f0247d06d1c56fd7e6c4c09d",
+      "symbol": null,
+      "name": null,
+      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "hook": "none",
+      "fee": 19800,
+      "block": 99457121,
+      "t0": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "t3m": {
+        "decision": "ALLOW",
+        "risk": null,
+        "reason": null
+      },
+      "changed": false,
+      "evaluated_at": "2026-10-28T18:02:30.029414+00:00",
+      "ts": "2026-10-28T18:02:30.029414+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     },
@@ -3506,1302 +4802,6 @@
       "changed": false,
       "evaluated_at": "2026-10-28T04:01:10.566588+00:00",
       "ts": "2026-10-28T04:01:10.566588+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x46052c0eb955f9c1929329087b107dfd971d6327",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99437456,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:52.648589+00:00",
-      "ts": "2026-10-28T04:00:52.648589+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x5640724ef47b629bc3534b386cd733913265095b",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99436038,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:34.718480+00:00",
-      "ts": "2026-10-28T04:00:34.718480+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8735d3910bb91b876f0fd1d81da3a0f8adbf1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99432917,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:01:22.550003+00:00",
-      "ts": "2026-10-27T23:01:22.550003+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x5211855b1915ba8217d4b74e3b7d4f32be7f7f0f",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99427776,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T04:00:16.624705+00:00",
-      "ts": "2026-10-28T04:00:16.624705+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xeb6dbc633db6565784ec9de88412faae2ec52920",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 790000,
-      "block": 99422388,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:00:46.525610+00:00",
-      "ts": "2026-10-27T23:00:46.525610+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xc3c3c0fc1aab6a41483fa1ae6859e47acef8c741",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99421941,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:58.529463+00:00",
-      "ts": "2026-10-28T03:59:58.529463+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x48ea6c2a02e114f8d80d886b49fe1fd5be2637eb",
-      "symbol": null,
-      "name": null,
-      "quote": "0x71796aad4cdff942d3ee8bb1227f779255f89dbc",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99398514,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:40.543340+00:00",
-      "ts": "2026-10-28T03:59:40.543340+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x350ee85874aede933b117de64ec938fd4237f98c",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "none",
-      "fee": 200000,
-      "block": 99391178,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('Panic error 0x11: Arithmetic operation results in underflow or overflow.', '0x4e487b710000000000000000000000000000000000000000000000000000000000000011')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('Panic error 0x11: Arithmetic operation results in underflow or overflow.', '0x4e487b710000000000000000000000000000000000000000000000000000000000000011')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:22.981251+00:00",
-      "ts": "2026-10-28T03:59:22.981251+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x0dc210c9af57a664761f02341c0fb6993b281114",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99390181,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:59:04.634122+00:00",
-      "ts": "2026-10-28T03:59:04.634122+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x49994db321af441d6b3da16edbe993f26d0b1d15",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99389560,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:46.790534+00:00",
-      "ts": "2026-10-28T03:58:46.790534+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x53d073f9ebff0e2d02dff361b8c27889ed7327c3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 850000,
-      "block": 99386174,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:28.568998+00:00",
-      "ts": "2026-10-28T03:58:28.568998+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xc630c2a328d946a9adea4e4e8490ead242e21e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99384834,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T23:00:10.530985+00:00",
-      "ts": "2026-10-27T23:00:10.530985+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe218ee8969c49cb6ff06fa0e226991a91bd0acdc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99381500,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:52.762388+00:00",
-      "ts": "2026-10-27T22:59:52.762388+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x51c01ca78d8805b9f47069d71f4bd7d23336a8c6",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99380832,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:34.663006+00:00",
-      "ts": "2026-10-27T22:59:34.663006+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x4ef84b9260ff5d89ffa266a22259a039075ac442",
-      "symbol": null,
-      "name": null,
-      "quote": "0x71796aad4cdff942d3ee8bb1227f779255f89dbc",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99375748,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:59:16.563805+00:00",
-      "ts": "2026-10-27T22:59:16.563805+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xec155615136f99aa048f9751be3d5e25dcfafba3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99375348,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown, may be a false positive): ('0xf4d678b8', '0xf4d678b8')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:58.525981+00:00",
-      "ts": "2026-10-27T22:58:58.525981+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x09b85ada6d101795f2613daac814328dbbe96a05",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99369938,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:40.524557+00:00",
-      "ts": "2026-10-27T22:58:40.524557+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xf351d93a524760433abc71fcad4b61488b0926ea",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 810000,
-      "block": 99359932,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x60D886ba...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x60D886ba...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:58:10.914794+00:00",
-      "ts": "2026-10-28T03:58:10.914794+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xfaa9e684de69d8735dd211fd3267486240e71f19",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99356227,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:52.958780+00:00",
-      "ts": "2026-10-28T03:57:52.958780+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x7066a64c24e4206cd62e83bf198c1e7eb361f51e",
-      "symbol": null,
-      "name": null,
-      "quote": "0x89ad791bd093d022d492cb3004f051340cfc1e18",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99352057,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:34.924086+00:00",
-      "ts": "2026-10-28T03:57:34.924086+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8fc98b871678f9749d17d968a476386f2da6f831",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 400000,
-      "block": 99346088,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:22.457530+00:00",
-      "ts": "2026-10-27T22:58:22.457530+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xb87363d8125ea061141ea0759eb207ca41dd1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xfe09fb328be1c286b4f597ed34764b7472ae72c5",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99328673,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:57:16.593928+00:00",
-      "ts": "2026-10-28T03:57:16.593928+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x39dbed3a2bd333467115de45665cc57f813c4571",
-      "symbol": null,
-      "name": null,
-      "quote": "0xd1305585229532ef744ce8954f3ba2656ba0416d",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99321975,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:58.595720+00:00",
-      "ts": "2026-10-28T03:56:58.595720+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x365b26889299b0523541941fa528ae50e06afcc5",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99321026,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:40.559714+00:00",
-      "ts": "2026-10-28T03:56:40.559714+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x8dc0178e4269086e24de24fad4e11d75df191aa7",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99320226,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:58:04.488825+00:00",
-      "ts": "2026-10-27T22:58:04.488825+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x931a199506a77e922740a9e2b6253841b2d6c753",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319692,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:22.550403+00:00",
-      "ts": "2026-10-28T03:56:22.550403+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xbb60967f2c81a497b149f09499552864a24f1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319412,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:46.575432+00:00",
-      "ts": "2026-10-27T22:57:46.575432+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe25ca1bf1ff15492f2a9ded25138caa5940640dc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99319111,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:28.507964+00:00",
-      "ts": "2026-10-27T22:57:28.507964+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x18a782fe5d5d1c337da42638c01bf3ed445c1e18",
-      "symbol": null,
-      "name": null,
-      "quote": "0xccee82fe024c36fa15e1005ede3e9e4787e23d09",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99314179,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:52:05.458898+00:00",
-      "ts": "2026-10-27T15:52:05.458898+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xf1b95ae4e7700b962714702ea53784dc8492a856",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 600000,
-      "block": 99310507,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:57:10.502279+00:00",
-      "ts": "2026-10-27T22:57:10.502279+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0xec383a25b6434216eaa695c11c26b765ba061521",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 99900,
-      "block": 99297868,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:56:04.607201+00:00",
-      "ts": "2026-10-28T03:56:04.607201+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xab093def657f15df31b33922a95e047add645b29",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 33500,
-      "block": 99281988,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:41.768120+00:00",
-      "ts": "2026-10-27T15:51:41.768120+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xbd095fb55f55d59f1e16115dabe3b81d5ce035dc",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99281646,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:46.582220+00:00",
-      "ts": "2026-10-28T03:55:46.582220+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x60c9548091ef083acfbace7f1e7fd663a02a7701",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99263669,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:23.868359+00:00",
-      "ts": "2026-10-27T15:51:23.868359+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
-      "symbol": null,
-      "name": null,
-      "quote": "0x411efb0e7f985935daec3d4c3ebaea0d0ad7d89f",
-      "hook": "none",
-      "fee": 375,
-      "block": 99261412,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:28.626636+00:00",
-      "ts": "2026-10-28T03:55:28.626636+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd11f4b6d13af5dad94f049c22e21f87f9c8da171",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99257435,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:51:11.197242+00:00",
-      "ts": "2026-10-27T15:51:11.197242+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd28fe4e14dcc22b687153a334df76fd1f3d90087",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99256607,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:55:10.683517+00:00",
-      "ts": "2026-10-28T03:55:10.683517+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
-      "symbol": null,
-      "name": null,
-      "quote": "0xeb8bd378b3161fab7460f3aa444df542bde79743",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99256119,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:52.881484+00:00",
-      "ts": "2026-10-28T03:54:52.881484+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xee66582f5ca8ce7b132d37182e5e9709f62ffdf7",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99255123,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:52.404783+00:00",
-      "ts": "2026-10-27T15:50:52.404783+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
-      "symbol": null,
-      "name": null,
-      "quote": "0x2d9240832dd0f9f66f1c1fe2d4b9278611611e18",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99244043,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:52.483473+00:00",
-      "ts": "2026-10-27T22:56:52.483473+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xad07b158d6ecd46c7c85064c280559f19a420d86",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 900000,
-      "block": 99234225,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:34.563703+00:00",
-      "ts": "2026-10-27T22:56:34.563703+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x4de7e04d1d0d2520dcab187d922b2134be8d533b",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 999500,
-      "block": 99232891,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:35.050408+00:00",
-      "ts": "2026-10-28T03:54:35.050408+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd04fcb4b4007123624e60ca474e4f975a5e92e24",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99226994,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:29.974861+00:00",
-      "ts": "2026-10-27T15:50:29.974861+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xe8f28b5a1290eed4c6b374ab26e315b2739fc311",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 800000,
-      "block": 99223825,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:50:11.565550+00:00",
-      "ts": "2026-10-27T15:50:11.565550+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x59e3404c26e2d348ae75c985e01d07f0abeaf004",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 40000,
-      "block": 99209081,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:56:16.492540+00:00",
-      "ts": "2026-10-27T22:56:16.492540+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x84ca9bf43803276ecc68a0a1cc1e17a0c67efd9d",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 40000,
-      "block": 99184873,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:53.579280+00:00",
-      "ts": "2026-10-27T15:49:53.579280+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x9ab02ead789b6903c3c44d0ed32f9c707cdf12fd",
-      "symbol": null,
-      "name": null,
-      "quote": "0xb796a2cc2f85ecc4772a96b7a58a0d626cc6aec8",
-      "hook": "none",
-      "fee": 9000,
-      "block": 99182011,
-      "t0": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
-      },
-      "t3m": {
-        "decision": "WARN",
-        "risk": null,
-        "reason": "Sell simulation reverted (balance slot unknown, may be a false positive): ('0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001', '0xe450d38c000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:41.794819+00:00",
-      "ts": "2026-10-27T15:49:41.794819+00:00",
-      "verdict": "WARN",
-      "risk_score": null
-    },
-    {
-      "token": "0x7e57a4cd4bb2eb510aef548c990f8dd4096be69a",
-      "symbol": null,
-      "name": null,
-      "quote": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
-      "hook": "none",
-      "fee": 880000,
-      "block": 99161697,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x00000000...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0x00000000...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:17.653279+00:00",
-      "ts": "2026-10-27T15:49:17.653279+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x7dc90d39e96b2bc3166a960ea5233ad3007ee9a2",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99148491,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:54:16.584523+00:00",
-      "ts": "2026-10-28T03:54:16.584523+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xd34529f904cf3db6f5f4983b7f727c9f2c0bfce5",
-      "symbol": null,
-      "name": null,
-      "quote": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-      "hook": "unknown_3",
-      "fee": 0,
-      "block": 99143629,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": null
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:49:06.021073+00:00",
-      "ts": "2026-10-27T15:49:06.021073+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x0ceea25b9481eb227663b92c315e31840253ca2b",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99134293,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T22:55:58.486896+00:00",
-      "ts": "2026-10-27T22:55:58.486896+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x1937f6afe2a8212c73f671abb66eafb0a805cf23",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99132554,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:53:58.622878+00:00",
-      "ts": "2026-10-28T03:53:58.622878+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0xa134c4a31145dc99ac8eb8279406904af1e65790",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99132229,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-28T03:53:40.561556+00:00",
-      "ts": "2026-10-28T03:53:40.561556+00:00",
-      "verdict": "ALLOW",
-      "risk_score": null
-    },
-    {
-      "token": "0x6191ec18f9e7a0147d23903c669e7f457603a133",
-      "symbol": null,
-      "name": null,
-      "quote": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
-      "hook": "pons_v2",
-      "fee": 8388608,
-      "block": 99130298,
-      "t0": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "t3m": {
-        "decision": "ALLOW",
-        "risk": null,
-        "reason": "Ownership not renounced (owner: 0xeb7C0347...)"
-      },
-      "changed": false,
-      "evaluated_at": "2026-10-27T15:48:48.053162+00:00",
-      "ts": "2026-10-27T15:48:48.053162+00:00",
       "verdict": "ALLOW",
       "risk_score": null
     }

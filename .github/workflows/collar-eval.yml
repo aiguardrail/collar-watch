@@ -105,12 +105,11 @@ jobs:
           git worktree remove "$DATA_DIR" --force || rm -rf "$DATA_DIR"
           git worktree prune
 
-      # Claude: state.json cache (artımlı tarama)
       - name: Restore scan state
         uses: actions/cache/restore@v4
         with:
           path: outcomes-state.json
-          key: outcomes-state-${{ github.run_id }}
+          key: outcomes-state-v1
           restore-keys: |
             outcomes-state-
 
@@ -157,8 +156,9 @@ jobs:
           if [ "$zero_count" -gt 0 ]; then exit 1; fi
           if [ ! -s sample-meta.json ]; then exit 1; fi
 
+      # v0.7.3: timeout 170dk (139 havuz × 180s / 3 concurrency ≈ 139 dk, +30dk marj)
       - name: Evaluate with Collar
-        timeout-minutes: 120
+        timeout-minutes: 170
         env:
           COLLAR_API_KEY: ${{ secrets.COLLAR_API_KEY }}
           DELAY_SEC: ${{ inputs.delay_sec || '180' }}
@@ -190,7 +190,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: outcomes-state.json
-          key: outcomes-state-${{ github.run_id }}
+          key: outcomes-state-v1
 
       - name: Build UI JSON
         if: success()

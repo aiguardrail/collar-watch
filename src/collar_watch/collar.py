@@ -340,8 +340,9 @@ async def main():
     failed = total - len(results)
     error_rate = (bad + failed) / total if total > 0 else 1.0
     print(f"\nHata oranı: {bad + failed}/{total} (%{error_rate*100:.1f})")
-    if error_rate > 0.05:
-        print(f"HATA: Error oranı %5'i aştı (%{error_rate*100:.1f}). Publish iptal.", file=sys.stderr)
+    # v0.7.3: %10 eşiği (Collar API geçici 429'lara tolerans)
+    if error_rate > 0.10:
+        print(f"HATA: Error oranı %10'u aştı (%{error_rate*100:.1f}). Publish iptal.", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

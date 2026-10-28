@@ -1,4 +1,4 @@
-"""outcomes.py - v0.7 (Claude review: SWAP_TOPIC fix, topic filter, incremental, time budget)"""
+"""outcomes.py - v0.7.2 (SWAP_TOPIC fix, incremental, per_pool for dashboard, by_hook, trusted guard)"""
 import asyncio
 import json
 import math
@@ -30,12 +30,11 @@ LOOKBACK_HOURS = float(os.getenv("LOOKBACK_HOURS", "24"))
 START_RANGE = int(os.getenv("START_RANGE", "2000"))
 MIN_RANGE = int(os.getenv("MIN_RANGE", "200"))
 RPC_RPS = float(os.getenv("RPC_RPS", "3"))
-POOL_BATCH = int(os.getenv("POOL_BATCH", "50"))       # Claude önerisi: topic filtre chunk
-TIME_BUDGET_SEC = int(os.getenv("TIME_BUDGET_SEC", "3000"))  # 50dk
+POOL_BATCH = int(os.getenv("POOL_BATCH", "50"))
+TIME_BUDGET_SEC = int(os.getenv("TIME_BUDGET_SEC", "3000"))
 COOLDOWN_EVERY = int(os.getenv("COOLDOWN_EVERY", "100"))
 COOLDOWN_SEC = float(os.getenv("COOLDOWN_SEC", "15"))
 
-# Claude: Swap event düzeltilmiş hash
 MODIFY_LIQ_TOPIC = "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec"
 SWAP_TOPIC = os.getenv("SWAP_TOPIC", "0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f").strip().lower()
 USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
@@ -51,7 +50,6 @@ for _pair in os.getenv("HOOK_LABELS", "").split(","):
 
 class RangeError(RuntimeError): pass
 
-# --- Global token bucket (Claude önerisi: tek limiter) ---
 _rate = {"next": 0.0}
 _rate_lock = asyncio.Lock()
 
@@ -180,11 +178,9 @@ def decode_modify_liquidity(lg):
     return topics[1].lower(), delta, "0x" + topics[2][-40:].lower()
 
 def decode_swap(lg):
-    """Claude: 384 byte beklenmeli. liquidity, tick, fee de eklenmeli."""
     topics = lg.get("topics", [])
     if len(topics) < 3: return None
     data = lg["data"][2:]
-    # Claude: 6 word gerekli (amount0, amount1, sqrtPriceX96, liquidity, tick, fee)
     if len(data) < 384: return None
     amt0 = int(data[0:64], 16)
     if amt0 >= (1 << 255): amt0 -= (1 << 256)
@@ -198,14 +194,12 @@ def decode_swap(lg):
     return topics[1].lower(), "0x" + topics[2][-40:].lower(), amt0, amt1, float(sqrt_price), liquidity, tick, fee
 
 async def scan_chain_chunk(client, from_block, to_block, pool_ids, time_start):
-    """Claude önerisi: topics[1] olarak pool ID'leri chunk'lar halinde ver."""
     liq_series = defaultdict(list)
     swap_series = defaultdict(list)
     size, cap, frm, ok_streak, calls = START_RANGE, START_RANGE, from_block, 0, 0
     total_blocks = max(1, to_block - from_block + 1)
     time_budget_hit = False
 
-    # Pool ID listesi 50'lik gruplara ayrılır (RPC limiti için)
     id_chunks = [pool_ids[i:i+POOL_BATCH] for i in range(0, len(pool_ids), POOL_BATCH)]
     print(f"  {len(pool_ids)} pool ID, {len(id_chunks)} chunk ({POOL_BATCH}/chunk)")
 
@@ -217,8 +211,6 @@ async def scan_chain_chunk(client, from_block, to_block, pool_ids, time_start):
 
         to = min(frm + size - 1, to_block)
         try:
-            # TÜM chunk'ları birleştir, tek RPC çağrısında topics[1] filtresi ile
-            all_ids = pool_ids  # zaten tek RPC'ye sığmayacak kadar fazlaysa chunk'lıyoruz
             for chunk in id_chunks:
                 logs = await rpc(client, "eth_getLogs", [{
                     "address": POOL_MANAGER,
@@ -234,7 +226,6 @@ async def scan_chain_chunk(client, from_block, to_block, pool_ids, time_start):
                     elif t0t == SWAP_TOPIC:
                         d = decode_swap(lg)
                         if d: swap_series[d[0]].append((int(lg["blockNumber"], 16), d[1], d[2], d[3], d[4]))
-                # Chunk'lar arasında kısa bekleme
                 await asyncio.sleep(0.3)
         except RangeError as e:
             if size <= MIN_RANGE:
@@ -300,7 +291,6 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
     trade_amounts = Counter()
 
     for evt in swap_events:
-        # v0.7: 8 elemanlı decode_swap tuple
         blk, sender, amt0, amt1, sqrt_price = evt[0], evt[1], evt[2], evt[3], evt[4]
         if blk < init_block: continue
         if blk > end: break
@@ -335,7 +325,8 @@ def analyze_pool(liq_events, swap_events, init_block, window_blocks, token_is_c0
         if count / swap_count > 0.40: is_bot_activity = True
     flippers = buyer_wallets.intersection(seller_wallets)
     is_flipping_network = len(buyer_wallets) > 5 and (len(flippers) / len(buyer_wallets)) > 0.50
-    is_trusted = (not price_crash and max_dd_liq < LP_PULL_THRESHOLD and
+    # v0.7.2: swap_count > 0 zorunlu — ölü havuz "trusted" görünmesin
+    is_trusted = (swap_count > 0 and not price_crash and max_dd_liq < LP_PULL_THRESHOLD and
                   not is_honeypot and not is_wash_trade and not is_synchronized_dump and
                   not is_bot_activity and not is_flipping_network and early_snipers <= 3)
 
@@ -372,7 +363,75 @@ def make_pending(p, reason="pending_history"):
         "is_synchronized_dump": False,
         "is_bot_activity": False, "is_flipping_network": False,
         "max_drawdown_pct": 0, "price_drop_pct": 0,
-        "pool_id": p.get("pool_id"), "hook_addr": p.get("hook_addr"),
+        "pool_id": p.get("pool_id"),
+        "hook_addr": p.get("hook_addr"),
+        "hook": p.get("hook"),
+    }
+
+def build_summary(inc, final_list, status, lookback_hours):
+    """v0.7.2: aktif/collecting ortak özet bloğu. Dashboard için per_pool + by_hook + unique_tokens."""
+    if not inc:
+        return {
+            "schema": 7, "rules_version": "v0.7.2-fixed",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "lookback_hours": lookback_hours,
+            "status": status,
+            "overall": {"n": 0, "rug": 0, "rate": None, "ci95": [0.0, 1.0]},
+            "overall_unique": {"n": 0, "rug": 0, "rate": None, "ci95": [0.0, 1.0]},
+            "unique_tokens": 0,
+            "verdicts": 0,
+            "trusted_tokens": {"n": 0, "total": 0},
+            "dead_pools": {"n": 0, "total": 0},
+            "anomalies_summary": {
+                "honeypots": 0, "wash_trading": 0, "synchronized_dumps": 0,
+                "bot_activity": 0, "flipping_networks": 0, "sniper_attacks": 0,
+                "pools_without_any_swap": 0,
+            },
+            "by_hook": {},
+            "per_pool": final_list,
+        }
+
+    total_rug = sum(1 for r in inc if r.get("rug_24h"))
+    total_trusted = sum(1 for r in inc if r.get("is_trusted"))
+    dead_pools = sum(1 for r in inc if r.get("is_dead_pool"))
+    unique_tokens = len({r["token"].lower() for r in inc})
+    unique_rug = len({r["token"].lower() for r in inc if r.get("rug_24h")})
+
+    anomalies = {
+        "honeypots": sum(1 for r in inc if r.get("is_honeypot")),
+        "wash_trading": sum(1 for r in inc if r.get("is_wash_trade")),
+        "synchronized_dumps": sum(1 for r in inc if r.get("is_synchronized_dump")),
+        "bot_activity": sum(1 for r in inc if r.get("is_bot_activity")),
+        "flipping_networks": sum(1 for r in inc if r.get("is_flipping_network")),
+        "sniper_attacks": sum(1 for r in inc if r.get("early_snipers", 0) > 3),
+        "pools_without_any_swap": sum(1 for r in inc if r.get("swap_count", 0) == 0),
+    }
+
+    by_hook = defaultdict(lambda: {"n": 0, "rug": 0})
+    for r in inc:
+        hk = (r.get("hook_addr") or "none").lower()
+        by_hook[hk]["n"] += 1
+        if r.get("rug_24h"):
+            by_hook[hk]["rug"] += 1
+
+    return {
+        "schema": 7, "rules_version": "v0.7.2-fixed",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "lookback_hours": lookback_hours,
+        "status": status,
+        "overall": rate_block(total_rug, len(inc)),
+        "overall_unique": rate_block(unique_rug, unique_tokens),
+        "unique_tokens": unique_tokens,
+        "verdicts": len(inc),
+        "trusted_tokens": {"n": total_trusted, "total": len(inc)},
+        "dead_pools": {"n": dead_pools, "total": len(inc)},
+        "anomalies_summary": anomalies,
+        "by_hook": {
+            hk: {"n": v["n"], "rug": v["rug"],
+                 "rug_rate": round(v["rug"] / v["n"], 4) if v["n"] else None}
+            for hk, v in by_hook.items()
+        },
+        "per_pool": final_list,
     }
 
 async def main():
@@ -383,16 +442,7 @@ async def main():
     pools = load_pools()
     if not pools:
         print("Havuz yok, boş outcomes yazıyorum.")
-        OUT.write_text(json.dumps({
-            "schema": 7, "rules_version": "v0.7",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "status": "collecting",
-            "overall": {"n": 0, "rug": 0, "rate": None, "ci95": [0.0, 1.0]},
-            "trusted_tokens": {"n": 0, "total": 0},
-            "dead_pools": {"n": 0, "total": 0},
-            "anomalies_summary": {"honeypots": 0, "wash_trading": 0, "synchronized_dumps": 0,
-                                  "bot_activity": 0, "flipping_networks": 0, "sniper_attacks": 0},
-        }, indent=2))
+        OUT.write_text(json.dumps(build_summary([], [], "collecting", LOOKBACK_HOURS), indent=2))
         return
 
     attach_collar_sell_sim(pools)
@@ -407,13 +457,10 @@ async def main():
         window_blocks = int(LP_WINDOW_SEC * bps)
         lookback_blocks = int(LOOKBACK_HOURS * 3600 * bps)
 
-    # Claude önerisi: artımlı tara. Eğer state varsa son bloğu kullan.
     last_scanned = state.get("last_scanned_block", 0)
     if last_scanned > 0 and last_scanned < head:
-        # Artımlı: sadece yeni bloklar
         scan_start = last_scanned + 1
     else:
-        # İlk defa: son (window + lookback) bloğu tara
         scan_start = max(0, head - window_blocks - lookback_blocks)
 
     print(f"bps={bps:.2f} | window={window_blocks:,} | lookback={lookback_blocks:,}")
@@ -479,10 +526,11 @@ async def main():
                 "is_bot_activity": a["is_bot_activity"], "is_flipping_network": a["is_flipping_network"],
                 "max_drawdown_pct": round(a["max_drawdown_liq"] * 100, 1),
                 "price_drop_pct": a["max_price_dd_pct"],
-                "pool_id": pid, "hook_addr": p.get("hook_addr"),
+                "pool_id": pid,
+                "hook_addr": p.get("hook_addr"),
+                "hook": p.get("hook"),  # v0.7.2: dashboard hook eşleştirmesi için
             })
 
-        # Claude önerisi: state güncelle
         save_state(last_successful_block)
         print(f"State kaydedildi: last_block={last_successful_block}")
 
@@ -496,58 +544,26 @@ async def main():
 
     inc = [r for r in final_list if r.get("status") == "included"]
 
-    # Claude: payda boş -> "collecting" status ile geçerli JSON yaz
     if not inc:
         print("\n!! Olgun (24h dolmuş) havuz yok — 'collecting' status ile yaz.")
-        result = {
-            "schema": 7, "rules_version": "v0.7-cumulative",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "lookback_hours": LOOKBACK_HOURS,
-            "status": "collecting",
-            "overall": {"n": 0, "rug": 0, "rate": None, "ci95": [0.0, 1.0]},
-            "trusted_tokens": {"n": 0, "total": 0},
-            "dead_pools": {"n": 0, "total": 0},
-            "anomalies_summary": {"honeypots": 0, "wash_trading": 0, "synchronized_dumps": 0,
-                                  "bot_activity": 0, "flipping_networks": 0, "sniper_attacks": 0},
-        }
+        result = build_summary([], final_list, "collecting", LOOKBACK_HOURS)
         OUT.write_text(json.dumps(result, indent=2))
         with open(OUT_JSONL, "w") as f:
             for p in final_list: f.write(json.dumps(p) + "\n")
         return
 
-    total_rug = sum(1 for r in inc if r.get("rug_24h"))
-    total_trusted = sum(1 for r in inc if r.get("is_trusted"))
-    dead_pools = sum(1 for r in inc if r.get("is_dead_pool"))
-
-    anomalies = {
-        "honeypots": sum(1 for r in inc if r.get("is_honeypot")),
-        "wash_trading": sum(1 for r in inc if r.get("is_wash_trade")),
-        "synchronized_dumps": sum(1 for r in inc if r.get("is_synchronized_dump")),
-        "bot_activity": sum(1 for r in inc if r.get("is_bot_activity")),
-        "flipping_networks": sum(1 for r in inc if r.get("is_flipping_network")),
-        "sniper_attacks": sum(1 for r in inc if r.get("early_snipers", 0) > 3),
-    }
-
-    result = {
-        "schema": 7, "rules_version": "v0.7-cumulative",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "lookback_hours": LOOKBACK_HOURS,
-        "status": "active",
-        "overall": rate_block(total_rug, len(inc)),
-        "trusted_tokens": {"n": total_trusted, "total": len(inc)},
-        "dead_pools": {"n": dead_pools, "total": len(inc)},
-        "anomalies_summary": anomalies,
-    }
-
+    result = build_summary(inc, final_list, "active", LOOKBACK_HOURS)
     OUT.write_text(json.dumps(result, indent=2))
     with open(OUT_JSONL, "w") as f:
         for p in final_list: f.write(json.dumps(p) + "\n")
 
     o = result["overall"]
     print(f"\n=== SONUÇ ===")
-    print(f"payda={o['n']} rug={o['rug']} oran={o['rate']}")
-    print(f"Trusted: {total_trusted}, Dead: {dead_pools}")
-    print(f"Anomaliler: {anomalies}")
+    print(f"verdicts={o['n']}  rug={o['rug']}  oran={o['rate']}")
+    print(f"unique_tokens={result['unique_tokens']}")
+    print(f"Trusted: {result['trusted_tokens']['n']}, Dead: {result['dead_pools']['n']}")
+    print(f"Hooks: {len(result['by_hook'])}")
+    print(f"Anomaliler: {result['anomalies_summary']}")
 
 if __name__ == "__main__":
     asyncio.run(main())

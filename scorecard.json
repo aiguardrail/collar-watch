@@ -1,109 +1,109 @@
 {
   "schema": 1,
   "rules_version": "v0",
-  "generated_at": "2026-10-27T23:56:36.820327+00:00",
+  "generated_at": "2026-10-28T05:00:31.441177+00:00",
   "window_hours": 48,
   "metric_type": "decision_stability",
   "sample": {
-    "evaluated": 237,
-    "n_complete": 237,
-    "total_pools_in_window": 144,
-    "sample_rate": 1.6458
+    "evaluated": 345,
+    "n_complete": 345,
+    "total_pools_in_window": 150,
+    "sample_rate": 2.3
   },
   "t0": {
     "counts": {
-      "ALLOW": 223,
-      "WARN": 11,
-      "DENY": 3,
+      "ALLOW": 326,
+      "WARN": 17,
+      "DENY": 2,
       "ERROR": 0,
       "UNKNOWN": 0
     }
   },
   "t3m": {
     "counts": {
-      "ALLOW": 226,
-      "WARN": 11,
+      "ALLOW": 328,
+      "WARN": 17,
       "DENY": 0,
       "ERROR": 0,
       "UNKNOWN": 0
     }
   },
   "transitions": {
-    "ALLOW\u2192ALLOW": 223,
-    "DENY\u2192ALLOW": 3,
-    "WARN\u2192WARN": 11
+    "ALLOW\u2192ALLOW": 326,
+    "DENY\u2192ALLOW": 2,
+    "WARN\u2192WARN": 17
   },
   "changes": {
-    "total_changed": 3,
-    "change_rate": 0.0127
+    "total_changed": 2,
+    "change_rate": 0.0058
   },
   "flip": {
-    "allow_t0_count": 223,
-    "allow_t3m_count": 226,
+    "allow_t0_count": 326,
+    "allow_t3m_count": 328,
     "flipped_out": 0,
-    "flipped_in": 3,
+    "flipped_in": 2,
     "flip_rate": 0.0,
     "flip_rate_ci95": [
       0.0,
-      0.0169
+      0.0116
     ]
   },
   "deny_breakdown": {
-    "total_deny": 3,
+    "total_deny": 2,
     "rule_based": 0,
     "risk_flag": 0,
-    "other": 3
+    "other": 2
   },
   "hook_distribution": [
     {
       "hook": "pons_v2",
-      "n": 110
+      "n": 157
     },
     {
       "hook": "none",
-      "n": 80
+      "n": 123
     },
     {
       "hook": "unknown_3",
-      "n": 19
+      "n": 30
     },
     {
       "hook": "unknown_4",
-      "n": 14
+      "n": 17
     },
     {
       "hook": "unknown",
-      "n": 12
+      "n": 14
     },
     {
       "hook": "unknown_9",
-      "n": 1
+      "n": 2
     },
     {
       "hook": "unknown_7",
-      "n": 1
+      "n": 2
     }
   ],
   "risk_factors": [
     {
       "factor": "Ownership not renounced (owner: 0xeb7C0347...)",
-      "n": 96
-    },
-    {
-      "factor": "Sell simulation reverted (balance slot unknown",
-      "n": 5
+      "n": 136
     },
     {
       "factor": "may be a false positive): ('0xf4d678b8'",
-      "n": 4
+      "n": 8
     },
     {
       "factor": "'0xf4d678b8')",
-      "n": 4
+      "n": 8
     },
     {
       "factor": "Ownership not renounced (owner: 0xeb7C0347...); Sell simulation reverted (balance slot unknown",
-      "n": 3
+      "n": 7
+    },
+    {
+      "factor": "Sell simulation reverted (balance slot unknown",
+      "n": 6
     },
     {
       "factor": "may be a false positive): ('execution reverted: ERC20: transfer amount exceeds balance'",
@@ -114,15 +114,15 @@
       "n": 3
     },
     {
-      "factor": "Could not read bytecode: 429 Client Error: Too Many Requests for url: https://rpc.mainnet.chain.robinhood.com/",
-      "n": 3
-    },
-    {
       "factor": "but combination is not strong enough for auto-deny",
       "n": 3
     },
     {
       "factor": "Ownership not renounced (owner: 0x00000000...)",
+      "n": 2
+    },
+    {
+      "factor": "Owner can call risky functions",
       "n": 2
     }
   ],
@@ -132,23 +132,18 @@
     "conflict_disclosure": "This bot does not hold or trade any token. Scoring is independent of token ownership. Collar Guardrail has no token."
   },
   "outcomes": {
-    "measured": 84,
+    "measured": 129,
     "window": "24h",
     "method": "liquidity_pulled_within_24h",
-    "as_of": "2026-10-27T23:56:36.820315+00:00",
+    "as_of": "2026-10-28T05:00:31.441162+00:00",
     "by_verdict": {
       "ALLOW": {
-        "n": 80,
+        "n": 124,
         "rugs": 4,
-        "rate": 0.05
+        "rate": 0.0323
       },
       "WARN": {
-        "n": 3,
-        "rugs": 0,
-        "rate": 0.0
-      },
-      "DENY": {
-        "n": 1,
+        "n": 5,
         "rugs": 0,
         "rate": 0.0
       }

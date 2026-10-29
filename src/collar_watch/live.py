@@ -1,5 +1,14 @@
 """live.py - canlı Initialize sampler (Robinhood Chain, Uniswap V4).
 
+v0.8.0 değişiklikleri:
+  - `_recent_scan` cache: aynı token son RECENT_SCAN_TTL saniyede tarandıysa
+    skip. Redis varsa process'ler arası (live.py + collar.py main çakışmasını
+    önler), yoksa process-local.
+  - `MAX_RUNTIME_SEC` default 0 → 19800 (5.5h). Cron 6h'de bir olduğu için
+    30 dk güvenli boşluk kalır; cancel-in-progress: false ile üst üste binme
+    riski kalkar.
+  - `main()` log satırına rate_limiter.mode eklendi (redis/local).
+
 Akış (her yeni havuz için):
   init kaydı -> T0 hemen -> T3m (T0 çağrısından LIVE_DELAY_SEC sonra)
 
@@ -14,7 +23,8 @@ Gerekli env:
   QUOTE_ADDRS    virgülle ayrılmış quote token adresleri (USDG, WETH, native 0x00..)
 Opsiyonel:
   RPC_URL, INIT_TOPIC0, HOOK_LABELS ("0xabc:pons_v2,0xdef:x"), POLL_SEC,
-  REORG_DEPTH, MAX_BLOCK_RANGE, LIVE_DELAY_SEC, EVENTS, STATE
+  REORG_DEPTH, MAX_BLOCK_RANGE, LIVE_DELAY_SEC, EVENTS, STATE,
+  MAX_RUNTIME_SEC, RECENT_SCAN_TTL, REDIS_URL
 
 Kullanım:
     python -u -m collar_watch.live
@@ -50,18 +60,68 @@ POLL_SEC = float(os.getenv("POLL_SEC", "15"))
 REORG_DEPTH = int(os.getenv("REORG_DEPTH", "5"))
 MAX_BLOCK_RANGE = int(os.getenv("MAX_BLOCK_RANGE", "2000"))
 LIVE_DELAY_SEC = float(os.getenv("LIVE_DELAY_SEC", "180"))
-# 0 = sonsuz (systemd). >0 = bu kadar saniye sonra poll'u durdur, bekleyen T3m'leri bitir, çık (Actions).
-MAX_RUNTIME_SEC = float(os.getenv("MAX_RUNTIME_SEC", "0"))
+# 0 = sonsuz (systemd). >0 = bu kadar saniye sonra poll'u durdur, bekleyen
+# T3m'leri bitir, çık (Actions). Default 19800s = 5.5h; cron 6h'de bir
+# tetiklendiği için 30 dk güvenli boşluk bırakır, cancel-in-progress: false
+# ile bir sonraki run'ın üst üste binmesini engeller.
+MAX_RUNTIME_SEC = float(os.getenv("MAX_RUNTIME_SEC", "19800"))
 DRAIN_SEC = LIVE_DELAY_SEC + 90
+# Aynı token'ı bu süre içinde tekrar tarama (saniye). LIVE_DELAY_SEC'ten
+# büyük olmalı; T0+T3m toplam ~3 dk sürüyor, 5 dk rahat bir aralık.
+RECENT_SCAN_TTL = int(os.getenv("RECENT_SCAN_TTL", "300"))
 EVENTS = Path(os.getenv("EVENTS", "live-events.jsonl"))
 STATE = Path(os.getenv("STATE", "live-state.json"))
 
 _write_lock = asyncio.Lock()
 _block_ts_cache: dict[int, int] = {}
+# process-local recent-scan cache (Redis yoksa fallback)
+_scan_cache: dict[str, float] = {}
 
 
 def log(msg: str):
     print(f"{datetime.now(timezone.utc).strftime('%H:%M:%S')} {msg}", flush=True)
+
+
+# ---------- recent-scan cache ----------
+
+def _redis():
+    """Collar.py'nin SharedRateLimiter'ındaki Redis'i paylaş (varsa)."""
+    rl = getattr(C, "rate_limiter", None)
+    return getattr(rl, "_redis", None) if rl else None
+
+
+def _recent_scan(token: str) -> bool:
+    """
+    Token son RECENT_SCAN_TTL saniyede tarandı mı?
+
+    Redis varsa process'ler arası (live.py + collar.py __main__ aynı
+    token'ı iki kez taramaz). Redis yoksa process-local.
+
+    True dönerse çağıran taraf T0/T3m yapmadan skip etmeli.
+    """
+    now = time.time()
+    token = token.lower()
+
+    r = _redis()
+    if r is not None:
+        try:
+            key = f"collar:scan:{token}"
+            if r.exists(key):
+                return True
+            r.setex(key, RECENT_SCAN_TTL, "1")
+            return False
+        except Exception:
+            pass  # Redis bozuldu → local'e düş
+
+    if len(_scan_cache) > 2000:
+        cutoff = now - RECENT_SCAN_TTL
+        for k in list(_scan_cache.keys()):
+            if _scan_cache[k] < cutoff:
+                del _scan_cache[k]
+    if token in _scan_cache and now - _scan_cache[token] < RECENT_SCAN_TTL:
+        return True
+    _scan_cache[token] = now
+    return False
 
 
 # ---------- RPC ----------
@@ -175,6 +235,18 @@ def save_state(state: dict):
 async def run_pool(client, session_id, init: dict, t0_rec: dict | None = None):
     pid, token = init["pool_id"], init["token"]
 
+    # YENİ: token son RECENT_SCAN_TTL saniyede tarandıysa atla.
+    # - live.py restart'ları arasında aynı token'ı iki kez taramaz
+    # - live.py + collar.py __main__ aynı token'ı iki kez taramaz
+    # - aynı token birden fazla pool'da görünse bile tek T0/T3m
+    if t0_rec is None and _recent_scan(token):
+        log(f"skip {token[:10]}... (recent scan)")
+        await emit({
+            "stage": "skip", "pool_id": pid, "token": token,
+            "reason": "recent_scan",
+        })
+        return
+
     if t0_rec is None:
         s0 = {}
         res0 = await C._do_call(client, token, session_id, {}, s0)
@@ -272,7 +344,9 @@ async def main():
         sys.exit(1)
 
     log(f"live sampler: rpc={RPC_URL} pm={POOL_MANAGER[:10]}... "
-        f"quotes={len(QUOTES)} delay={LIVE_DELAY_SEC}s poll={POLL_SEC}s")
+        f"quotes={len(QUOTES)} delay={LIVE_DELAY_SEC}s poll={POLL_SEC}s "
+        f"runtime={MAX_RUNTIME_SEC:.0f}s rate_limiter={C.rate_limiter.mode} "
+        f"recent_scan_ttl={RECENT_SCAN_TTL}s")
 
     async with httpx.AsyncClient(timeout=C.TIMEOUT_SEC) as client:
         schema, err = await C.preflight(client, None)

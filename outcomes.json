@@ -1,7 +1,7 @@
 {
   "schema": 7,
   "rules_version": "v0.7.3-fixed",
-  "generated_at": "2026-11-04T06:43:15.575952+00:00",
+  "generated_at": "2026-11-04T19:54:45.147812+00:00",
   "lookback_hours": 72.0,
   "status": "active",
   "overall": {
